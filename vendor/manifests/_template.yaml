@@ -1,0 +1,24 @@
+# 第三方来源 Manifest 模板
+schema_version: "1.0"
+
+source:
+  name: <项目名>
+  url: <Git 仓库 URL>
+  commit: <锁定 commit hash>
+  tag: <可选 tag>
+  author: <作者 / 组织>
+  license: <SPDX 表达式>
+  notice: <NOTICE 文件路径或说明>
+  archived_at: "2026-08-12"
+
+audit:
+  structure: <pending/passed/failed>
+  protocol: <pending/passed/failed>
+  poc: <pending/passed/failed>
+  cross_check: <pending/passed/failed>
+
+usage:
+  mode: <depend_external|local_vendor|reference_only>
+  sbom: <SBOM 文件路径>
+  patches: []
+  notes: <说明>

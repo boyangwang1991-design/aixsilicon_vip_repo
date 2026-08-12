@@ -1,0 +1,36 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+
+# ---- FuseSoC / 仿真产物 ----
+build/
+*.o
+*.vcd
+*.fst
+*.log
+sim.out
+transcript
+*.fsdb
+*.wlf
+
+# ---- 发布产物 ----
+dist/
+*.tar.gz
+*.zip
+
+# ---- 编辑器 / 系统 ----
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# ---- 本机内部工具 / skills（不纳入公共仓库） ----
+.roo/
+
+# ---- 参考仓库（只记录清单，不提交克隆内容） ----
+# reference/ 下为第三方克隆，默认不纳入版本控制；
+# 若需要纳入，请改为按需 add，并保留 REFERENCE_MANIFEST.md
+reference/*
+!reference/REFERENCE_MANIFEST.md

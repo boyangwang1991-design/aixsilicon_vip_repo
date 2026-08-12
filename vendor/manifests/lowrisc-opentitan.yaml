@@ -1,0 +1,27 @@
+# 第三方来源 Manifest — OpenTitan
+schema_version: "1.0"
+
+source:
+  name: opentitan
+  url: https://github.com/lowRISC/opentitan
+  commit: 49df6acde4f81ce6e945153456373846f76379d9
+  tag: null
+  author: lowRISC / OpenTitan
+  license: Apache-2.0
+  notice: LICENSE
+  archived_at: "2026-08-12"
+
+audit:
+  structure: pending
+  protocol: pending
+  poc: pending
+  cross_check: pending
+
+usage:
+  mode: reference_only
+  sbom: metadata/sbom.spdx.json
+  patches: []
+  notes: >-
+    重点研究 hw/dv/sv 的 cip_lib / dv_utils / csr_utils / push_pull_agent /
+    uart_agent / spi_agent / i2c_agent / jtag_agent。需剥离 TL-UL、CIP 基类、
+    HJSON/DVSim 配置与 OpenTitan 目录假设；采用等级 A。

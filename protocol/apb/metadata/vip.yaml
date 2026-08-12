@@ -1,0 +1,47 @@
+# APB VIP Metadata — 依据 schema/vip_metadata.schema.yaml
+schema_version: "1.0"
+
+vip:
+  id: VIP-APB-001
+  name: apb
+  vlnv: aix:vip:apb:1.0.0
+  lifecycle: prototype
+  owner: dv-platform
+  license: Apache-2.0
+
+protocol:
+  family: AMBA
+  name: APB
+  revision: "ARM AMBA APB Protocol Specification (IHI 0024H), 受控内部位置: docs/spec_control.md"
+  modes: [active_master, active_slave, passive]
+
+capabilities:
+  independent_read_write: true
+  wait_state: true
+  slave_error: true
+  backpressure: true
+  reset_interrupt: true
+  xz_detection: true
+  timeout: true
+  ral_adapter: planned
+  multi_instance: true
+  fixed_seed_reproducible: true
+
+dependencies:
+  - aix:vip:common:^1.0
+
+tools:
+  vcs: beta
+  xcelium: beta
+  questa: unsupported
+  verilator: unsupported
+
+quality:
+  gate: V0_PROTOTYPE
+  requirement_coverage: 0
+  negative_test_pass_rate: 0
+
+provenance:
+  derived_from:
+    - taichi-ishitani/tvip-apb (参考审计，未复制代码)
+  sbom: metadata/sbom.spdx.json

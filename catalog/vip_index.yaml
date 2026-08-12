@@ -1,0 +1,48 @@
+generated_by: tools/catalog_export/export_catalog.py
+schema_version: '1.0'
+vips:
+- gate: V0_PROTOTYPE
+  id: VIP-APB-001
+  lifecycle: prototype
+  modes: [active_master, active_slave, passive]
+  name: apb
+  path: protocol/apb
+  protocol: APB
+  tools: {questa: unsupported, vcs: beta, verilator: unsupported, xcelium: beta}
+  vlnv: aix:vip:apb:1.0.0
+- gate: V0_PROTOTYPE
+  id: VIP-RV-001
+  lifecycle: prototype
+  modes: [active_master, active_slave, passive]
+  name: ready_valid
+  path: protocol/ready_valid
+  protocol: Ready/Valid Handshake
+  tools: {questa: unsupported, vcs: unsupported, verilator: unsupported, xcelium: unsupported}
+  vlnv: aix:vip:ready_valid:1.0.0
+- gate: V0_PROTOTYPE
+  id: VIP-CR-001
+  lifecycle: prototype
+  modes: [active_master, passive]
+  name: clock_reset
+  path: system/clock_reset
+  protocol: Clock/Reset
+  tools: {questa: unsupported, vcs: unsupported, verilator: unsupported, xcelium: unsupported}
+  vlnv: aix:vip:clock_reset:1.0.0
+- gate: V0_PROTOTYPE
+  id: VIP-MEM-001
+  lifecycle: prototype
+  modes: [active_slave, passive]
+  name: generic_memory
+  path: system/generic_memory
+  protocol: Generic Memory
+  tools: {questa: unsupported, vcs: unsupported, verilator: unsupported, xcelium: unsupported}
+  vlnv: aix:vip:generic_memory:1.0.0
+- gate: V0_PROTOTYPE
+  id: VIP-IRQ-001
+  lifecycle: prototype
+  modes: [active_master, passive]
+  name: interrupt
+  path: system/interrupt
+  protocol: Interrupt
+  tools: {questa: unsupported, vcs: unsupported, verilator: unsupported, xcelium: unsupported}
+  vlnv: aix:vip:interrupt:1.0.0

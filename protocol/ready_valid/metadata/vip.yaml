@@ -1,0 +1,42 @@
+# Ready/Valid VIP Metadata — 依据 schema/vip_metadata.schema.yaml
+schema_version: "1.0"
+
+vip:
+  id: VIP-RV-001
+  name: ready_valid
+  vlnv: aix:vip:ready_valid:1.0.0
+  lifecycle: prototype
+  owner: dv-platform
+  license: Apache-2.0
+
+protocol:
+  family: generic
+  name: Ready/Valid Handshake
+  revision: "受控：通用 ready/valid 握手语义，见 docs/spec_control.md（规划中）"
+  modes: [active_master, active_slave, passive]
+
+capabilities:
+  source_sink_monitor: planned
+  random_stall: planned
+  packet_mode: planned
+  timeout: planned
+  xz_detection: planned
+
+dependencies:
+  - aix:vip:common:^1.0
+
+tools:
+  vcs: unsupported
+  xcelium: unsupported
+  questa: unsupported
+  verilator: unsupported
+
+quality:
+  gate: V0_PROTOTYPE
+  requirement_coverage: 0
+  negative_test_pass_rate: 0
+
+provenance:
+  derived_from:
+    - pulp-platform/common_verification (参考审计，未复制代码)
+  sbom: metadata/sbom.spdx.json

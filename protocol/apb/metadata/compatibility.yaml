@@ -1,0 +1,33 @@
+# APB VIP 兼容矩阵
+# 依据 plan.md 第 10 节：未覆盖功能必须在 compatibility metadata 中明确声明。
+schema_version: "1.0"
+
+vlnv: aix:vip:apb:1.0.0
+
+interface_compat:
+  # hw-interfaces 中的接口契约 VLNV（待建立）
+  - aix:interface:apb:^1.0
+
+simulator_matrix:
+  vcs:
+    status: beta
+    notes: 已在内部 VCS 环境编译通过基本事务
+  xcelium:
+    status: beta
+    notes: 计划中
+  questa:
+    status: unsupported
+    notes: 未验证
+  verilator:
+    status: unsupported
+    notes: 不以 Verilator 作为主验证路径
+
+declared_limitations:
+  - 完整 APB4（含 PPROT/PSLVERR 扩展时序）尚未实现
+  - 未进行两个独立仿真器的对拍
+  - 协议覆盖率尚未达到 Gate
+  - mutation 测试尚未开展
+
+not_supported:
+  - PSTRB 字选扩展
+  - 完整 APB4 安全扩展（PPROT/PSLVERR）

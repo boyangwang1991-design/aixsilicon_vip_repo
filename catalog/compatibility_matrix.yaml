@@ -1,0 +1,7 @@
+compatibilities:
+- {gate: V0_PROTOTYPE, vlnv: 'aix:vip:apb:1.0.0'}
+- {gate: V0_PROTOTYPE, vlnv: 'aix:vip:ready_valid:1.0.0'}
+- {gate: V0_PROTOTYPE, vlnv: 'aix:vip:clock_reset:1.0.0'}
+- {gate: V0_PROTOTYPE, vlnv: 'aix:vip:generic_memory:1.0.0'}
+- {gate: V0_PROTOTYPE, vlnv: 'aix:vip:interrupt:1.0.0'}
+schema_version: '1.0'

@@ -1,0 +1,27 @@
+# 第三方来源 Manifest — TVIP-AXI
+schema_version: "1.0"
+
+source:
+  name: tvip-axi
+  url: https://github.com/taichi-ishitani/tvip-axi
+  commit: cd53d9275610438a1960e967b4b896c816d61ce6
+  tag: null
+  author: Taichi Ishitani
+  license: Apache-2.0
+  notice: LICENSE
+  archived_at: "2026-08-12"
+
+audit:
+  structure: pending
+  protocol: pending
+  poc: pending
+  cross_check: pending
+
+usage:
+  mode: reference_only
+  sbom: metadata/sbom.spdx.json
+  patches: []
+  notes: >-
+    AXI4 / AXI4-Lite Master/Slave、乱序、延迟、RAL adapter/predictor。
+    作为 AXI 代码起点候选；引入前需补协议覆盖、SVA、更多工具兼容与完整自测；
+    采用等级 A-。

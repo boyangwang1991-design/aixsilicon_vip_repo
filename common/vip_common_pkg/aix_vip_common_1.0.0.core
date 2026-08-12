@@ -1,0 +1,38 @@
+CAPI=2:
+# AIXSILICON VIP Common — FuseSoC Core
+# VLNV: aix:vip:common:1.0.0
+name: aix:vip:common:1.0.0
+
+description: >-
+  AIXSILICON VIP 公共底座：统一 config / agent / monitor / transaction /
+  compare policy。所有协议 VIP 与项目环境共同依赖。
+
+filesets:
+  rtl:
+    files:
+      - src/vip_common_pkg.sv
+      - src/vip_common_transaction.sv
+      - src/vip_common_monitor.sv
+      - src/vip_common_agent.sv
+      - src/vip_common_compare_policy.sv
+    file_type: systemVerilogSource
+
+parameters:
+  UVM_HOME:
+    datatype: str
+    paramtype: vlogparam
+    description: UVM 源路径（由仿真工具/上层 Core 提供）
+
+targets:
+  default:
+    filesets: [rtl]
+    description: 供其他 Core 依赖的默认包
+  lint:
+    filesets: [rtl]
+    description: 静态结构与规则检查入口
+  unit_sim:
+    filesets: [rtl]
+    description: 公共组件单元测试入口（测试文件规划中）
+  package:
+    filesets: [rtl]
+    description: 生成正式发布包

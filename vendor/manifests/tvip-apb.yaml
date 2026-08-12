@@ -1,0 +1,25 @@
+# 第三方来源 Manifest — TVIP-APB
+schema_version: "1.0"
+
+source:
+  name: tvip-apb
+  url: https://github.com/taichi-ishitani/tvip-apb
+  commit: 948f88f556885b4a27907cb207a84b1bf3c7f1cb
+  tag: null
+  author: Taichi Ishitani
+  license: Apache-2.0
+  notice: LICENSE
+  archived_at: "2026-08-12"
+
+audit:
+  structure: pending
+  protocol: pending
+  poc: pending
+  cross_check: pending
+
+usage:
+  mode: reference_only
+  sbom: metadata/sbom.spdx.json
+  patches: []
+  notes: >-
+    APB UVM VIP。与自研 APB 骨架做对比 PoC，择优重构；采用等级 B+。

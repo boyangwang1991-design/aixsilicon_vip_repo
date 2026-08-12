@@ -1,0 +1,27 @@
+# 第三方来源 Manifest — PULP common_verification
+schema_version: "1.0"
+
+source:
+  name: common_verification
+  url: https://github.com/pulp-platform/common_verification
+  commit: c5d97a1fae01d2d8e8e311dee341b6b8849dcf38
+  tag: null
+  author: PULP Platform
+  license: Solderpad Hardware License v0.51
+  notice: LICENSE
+  archived_at: "2026-08-12"
+
+audit:
+  structure: pending
+  protocol: pending
+  poc: pending
+  cross_check: pending
+
+usage:
+  mode: reference_only
+  sbom: metadata/sbom.spdx.json
+  patches: []
+  notes: >-
+    clk/reset、timeout、ready/valid master/slave、随机等待、watchdog，含 FuseSoC Core。
+    适合直接依赖或重构进入 DV Common；使用前需法务确认 Solderpad 0.51 条款；
+    采用等级 A-。

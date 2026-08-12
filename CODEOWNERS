@@ -1,0 +1,44 @@
+# AIXSILICON VIP Repository CODEOWNERS
+# 每个条目为最近使用该路径的团队或个人。默认所有者为 dv-platform 负责人。
+# 语法：<pattern> <owner1> <owner2> ...
+
+* @aixsilicon/dv-platform
+
+# 顶层元数据与 CI
+/.github/ @aixsilicon/dv-flow
+/schema/ @aixsilicon/dv-platform
+/catalog/ @aixsilicon/dv-platform
+/tools/ @aixsilicon/dv-flow
+
+# 公共基类
+/common/ @aixsilicon/dv-platform
+
+# 协议 VIP
+/protocol/apb/ @aixsilicon/dv-platform
+/protocol/axi_lite/ @aixsilicon/dv-platform
+/protocol/axi/ @aixsilicon/dv-platform
+/protocol/axi_stream/ @aixsilicon/dv-platform
+/protocol/ahb_lite/ @aixsilicon/dv-platform
+/protocol/ready_valid/ @aixsilicon/dv-platform
+
+# 外设 VIP
+/peripheral/ @aixsilicon/dv-platform
+
+# 系统服务 VIP
+/system/ @aixsilicon/dv-platform
+
+# 功能安全
+/safety/ @aixsilicon/dv-safety
+
+# 适配层
+/adapters/ @aixsilicon/dv-platform
+
+# 形式验证
+/formal/ @aixsilicon/dv-formal
+
+# 文档
+/docs/ @aixsilicon/dv-platform
+
+# 第三方参考资产
+/reference/ @aixsilicon/dv-platform
+/vendor/ @aixsilicon/dv-platform @aixsilicon/legal

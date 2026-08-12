@@ -1,0 +1,41 @@
+# Generic Memory VIP Metadata — 依据 schema/vip_metadata.schema.yaml
+schema_version: "1.0"
+
+vip:
+  id: VIP-MEM-001
+  name: generic_memory
+  vlnv: aix:vip:generic_memory:1.0.0
+  lifecycle: prototype
+  owner: dv-platform
+  license: Apache-2.0
+
+protocol:
+  family: system
+  name: Generic Memory
+  revision: "受控：协议无关存储器服务语义，见 docs/spec_control.md（规划中）"
+  modes: [active_slave, passive]
+
+capabilities:
+  sram_rom_model: planned
+  latency_model: planned
+  error_injection: planned
+  backdoor_access: planned
+
+dependencies:
+  - aix:vip:common:^1.0
+
+tools:
+  vcs: unsupported
+  xcelium: unsupported
+  questa: unsupported
+  verilator: unsupported
+
+quality:
+  gate: V0_PROTOTYPE
+  requirement_coverage: 0
+  negative_test_pass_rate: 0
+
+provenance:
+  derived_from:
+    - alexforencich/cocotbext-axi (Memory Model 参考，Python/MIT)
+  sbom: metadata/sbom.spdx.json

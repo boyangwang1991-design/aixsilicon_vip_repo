@@ -1,0 +1,68 @@
+# Testplan Schema (draft-07 / 2020-12 兼容)
+# 用于校验 testplan 定义（YAML 侧载数据），Test ID 需与 RTM 关联。
+$schema: http://json-schema.org/draft-07/schema#
+$id: https://aixsilicon.com/schema/testplan.schema.yaml
+title: AIXSILICON Testplan
+description: 描述 VIP 的测试计划、测试项、层次、target 与需求映射。
+type: object
+required:
+  - schema_version
+  - vip_vlnv
+  - tests
+properties:
+  schema_version:
+    type: string
+    const: "1.0"
+  vip_vlnv:
+    type: string
+    description: 该 testplan 所属 VIP 的 VLNV。
+  revision:
+    type: string
+    description: testplan 修订号或日期。
+  tests:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      required: [id, name, level, status]
+      properties:
+        id:
+          type: string
+          pattern: "^TEST-[A-Z0-9]+-[0-9]{3,}$"
+          description: 稳定 Test ID，如 TEST-APB-001。
+        name:
+          type: string
+        level:
+          type: string
+          enum:
+            - structure
+            - compile
+            - unit
+            - loopback
+            - checker_negative
+            - reference_dut
+            - cross_model
+            - stress
+            - mutation
+            - integration
+        target:
+          type: string
+          description: FuseSoC target 名，如 smoke / negative / regression。
+        status:
+          type: string
+          enum: [planned, implemented, running, passing, failing, blocked]
+        requirement_ids:
+          type: array
+          items:
+            type: string
+            description: 关联的 Requirement ID，如 REQ-APB-001。
+        description:
+          type: string
+        seed:
+          type: integer
+          description: 固定随机种子（可复现性要求）。
+        simulation_required:
+          type: boolean
+          default: true
+required_additional: true
+additionalProperties: true
