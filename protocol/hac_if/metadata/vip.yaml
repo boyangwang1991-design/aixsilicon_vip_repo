@@ -1,0 +1,50 @@
+# HAC-IF VIP Metadata — 依据 schema/vip_metadata.schema.yaml
+schema_version: "1.0"
+
+vip:
+  id: VIP-HAC-001
+  name: hac_if
+  vlnv: aix:vip:hac_if:1.0.0
+  lifecycle: prototype
+  owner: dv-platform
+  license: Apache-2.0
+
+protocol:
+  family: accelerator
+  name: HAC-IF (Hardware Accelerator Core Interface)
+  revision: "AIXSILICON HAC-IF V0.1，见 hwif_repo accelerator/hac_if/spec/hac_if_spec.md"
+  modes: [active_core, active_shell, passive]
+
+capabilities:
+  ctrl_agent: planned
+  stream_agent: planned
+  mem_agent: planned
+  lmem_agent: planned
+  event_agent: planned
+  protocol_checker: planned
+  scoreboard: planned
+  reference_memory: planned
+  error_injector: planned
+  coverage_model: planned
+  virtual_sequence: planned
+  axi_adapter_consistency: planned
+
+dependencies:
+  - aix:vip:common:^1.0
+  - aix:interface:hac_if:0.1.0
+
+tools:
+  vcs: unsupported
+  xcelium: unsupported
+  questa: unsupported
+  verilator: unsupported
+
+quality:
+  gate: V0_PROTOTYPE
+  requirement_coverage: 0
+  negative_test_pass_rate: 0
+
+provenance:
+  derived_from:
+    - AIXSILICON HAC-IF 规划（digest/hwif.md）与 HWIF 契约（参考，未复制外部代码）
+  sbom: metadata/sbom.spdx.json

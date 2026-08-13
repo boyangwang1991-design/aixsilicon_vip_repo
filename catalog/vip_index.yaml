@@ -2,6 +2,15 @@ generated_by: tools/catalog_export/export_catalog.py
 schema_version: '1.0'
 vips:
 - gate: V0_PROTOTYPE
+  id: VIP-HAC-001
+  lifecycle: prototype
+  modes: [active_core, active_shell, passive]
+  name: hac_if
+  path: protocol/hac_if
+  protocol: HAC-IF (Hardware Accelerator Core Interface)
+  tools: {questa: unsupported, vcs: unsupported, verilator: unsupported, xcelium: unsupported}
+  vlnv: aix:vip:hac_if:1.0.0
+- gate: V0_PROTOTYPE
   id: VIP-APB-001
   lifecycle: prototype
   modes: [active_master, active_slave, passive]

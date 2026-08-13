@@ -6,6 +6,7 @@
 |---|---|---|---|
 | APB | [`apb/`](apb/) | P0 | 骨架完成（V0 Prototype） |
 | Ready/Valid | [`ready_valid/`](ready_valid/) | P0 | 规划中 |
+| HAC-IF | [`hac_if/`](hac_if/) | P0 | 规划中（CTRL/EVENT 先行） |
 | AXI4-Lite | [`axi_lite/`](axi_lite/) | P1 | 规划中 |
 | AXI4 | [`axi/`](axi/) | P1 | 规划中 |
 | AXI-Stream | [`axi_stream/`](axi_stream/) | P1 | 规划中 |
