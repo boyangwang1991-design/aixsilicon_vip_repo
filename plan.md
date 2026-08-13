@@ -825,3 +825,15 @@ VIP Repo一期完成不能只以“提交多少个Agent”衡量，应满足：
 
 届时VIP Repo将从“验证代码仓”升级为IP设计与SoC集成的公共验证产品线。
 
+---
+
+## 20. 跨仓一致性修订（2026-08-13）
+
+> 依据 [`plans/cross-repo-architecture-review.md`](../../plans/cross-repo-architecture-review.md)（ADR-0003/0005/0006）。
+
+- 修正幽灵仓引用：`eda-flow`/`eda-rules` → workflow（DAG/Gate）+ tool（Result adapter）、workflow `policies/`；`hw-models` → techlib/model；
+- 与 dv-common 划界（R6）：VIP `common/` 只保留协议/事务相关公共；log/scoreboard/clk_rst/result 等协议无关机制归 dv-common；
+- 协议 SVA/Checker/Coverage 归本仓；接口契约归 hwif；桥/同步器/位宽转换实现归 cbb；
+- vendored `reference/`（OpenTitan/PULP 等）为只读对拍，不发布、不进入 fusesoc 正式发现与 Catalog（A2）；
+- VLNV 统一 `aixsilicon:vip:*`（ADR-0003，存量 `aix:vip:*` 走迁移窗口）。
+
