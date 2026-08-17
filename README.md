@@ -66,18 +66,27 @@ aix:vip:clock_reset:1.0.0
 
 ## 快速开始
 
+> 确定性校验/生成工具统一在私有 skill [`vip-repo-maintainer`](../../aixsilicon_skill_repo/skills/vip-repo-maintainer/SKILL.md)
+> （唯一入口 `vip_tool.py`）；本仓库只保存 VIP 产品资产与元数据。
+
 ```bash
+# 套件路径
+SUITE_DIR="${SUITE_DIR:-.roo/skills/vip-repo-maintainer}"
+
 # 1. 查看 Catalog 中已登记的 VIP 与兼容矩阵
 cat catalog/vip_index.yaml
 
-# 2. 基于 APB 模板生成一个新 VIP 骨架（示例）
-python3 tools/vip_new/templates  # 或参考 protocol/apb/ 手动拷贝
+# 2. 基于模板生成一个新 VIP 骨架（示例：lite VIP）
+uv run python ${SUITE_DIR}/scripts/vip_tool.py scaffold --root . \
+  --name apb5_lite --category protocol --template lite
 
 # 3. 使用 FuseSoC 解析某个 VIP Core 的依赖与 target
 fusesoc core show aix:vip:apb:1.0.0 --cores-root=.
 
-# 4. 结构 / Metadata 校验
-python3 tools/metadata_check/check_metadata.py protocol/apb/metadata/vip.yaml
+# 4. 结构 / Metadata / Testplan 校验
+uv run python ${SUITE_DIR}/scripts/vip_tool.py structure-check --root . --vip apb
+uv run python ${SUITE_DIR}/scripts/vip_tool.py metadata-check --root . --vip apb
+uv run python ${SUITE_DIR}/scripts/vip_tool.py testplan-check --root . --vip apb
 ```
 
 ## 建设状态

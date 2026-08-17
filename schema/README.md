@@ -11,10 +11,12 @@
 
 ## 校验方式
 
-CI 与本地均使用 [`tools/metadata_check/`](../tools/metadata_check/) 中的脚本进行校验：
+CI 与本地均使用 `vip-repo-maintainer` 套件统一入口校验（Schema 语义见
+[`vip-repo-maintainer/references/metadata-schema.md`](../../../aixsilicon_skill_repo/skills/vip-repo-maintainer/references/metadata-schema.md)）：
 
 ```bash
-python3 tools/metadata_check/check_metadata.py protocol/apb/metadata/vip.yaml
+SUITE_DIR="${SUITE_DIR:-.roo/skills/vip-repo-maintainer}"
+uv run python ${SUITE_DIR}/scripts/vip_tool.py metadata-check --root .. --vip apb
 ```
 
 ## 约定

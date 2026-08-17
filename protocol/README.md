@@ -12,5 +12,9 @@
 | AXI-Stream | [`axi_stream/`](axi_stream/) | P1 | 规划中 |
 | AHB-Lite | [`ahb_lite/`](ahb_lite/) | P1 | 规划中 |
 
-> 新建 VIP：复制 `apb/` 模板并全局重命名，或使用
-> `tools/vip_new/generate_vip.py`（见 [`tools/`](../tools/)）。
+> 新建 VIP：使用 `vip-repo-maintainer` 套件统一入口生成骨架：
+> ```bash
+> SUITE_DIR="${SUITE_DIR:-.roo/skills/vip-repo-maintainer}"
+> uv run python ${SUITE_DIR}/scripts/vip_tool.py scaffold --root .. --name <vip> --category protocol --template lite
+> ```
+> 或参考 [`apb/`](apb/) 标准模板手动拷贝。

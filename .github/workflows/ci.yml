@@ -1,6 +1,6 @@
-# AIXSILICON VIP Repository — Pull Request 流水线
+# AIXSILICON VIP Repository — Pull Request 流水线（self-contained）
 # 依据 plan.md 第 11.1 节：
-#   1. YAML/Schema/格式检查
+#   1. YAML/Schema/格式检查（self-contained，不依赖私有 skill）
 #   2. 许可证与 SBOM 检查
 #   3. FuseSoC Core 解析、依赖闭包与 VLNV 重复检查
 #   4. Lint 与编译
@@ -8,6 +8,10 @@
 #   6. RTM、Testplan 与 Coverage ID 完整性检查
 #   7. 文档构建
 #   8. 影响分析报告
+#
+# 注意：确定性深度校验（G0-G9 全量）统一在私有 skill `vip-repo-maintainer`
+# （唯一入口 `vip_tool.py`）执行；本 CI 保持 self-contained，只做结构级门禁，
+# 保证开源仓库 CI 不依赖私有 skill（对齐 skill_repo_plan §2.2 硬约束）。
 
 name: ci
 
@@ -17,8 +21,8 @@ on:
     branches: [main]
 
 jobs:
-  metadata-schema:
-    name: Metadata / Schema 校验
+  structure-gate:
+    name: 结构 / Schema 自含门禁
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,12 +31,83 @@ jobs:
           python-version: "3.11"
       - name: 安装依赖
         run: pip install pyyaml
-      - name: Metadata 校验
-        run: python3 tools/metadata_check/check_metadata.py --all
-      - name: Testplan / Coverage / RTM 校验
-        run: python3 tools/testplan_check/check_testplan.py --all
-      - name: Catalog 导出（确保索引与 metadata 一致）
-        run: python3 tools/catalog_export/export_catalog.py
+      - name: vip.yaml 可解析且必填字段完整
+        run: python3 - <<'EOF'
+import glob, sys, yaml
+bad = []
+for c in sorted(glob.glob("**/metadata/vip.yaml", recursive=True)):
+    try:
+        d = yaml.safe_load(open(c, encoding="utf-8"))
+    except Exception as e:
+        bad.append(f"{c}: parse error: {e}")
+        continue
+    if not isinstance(d, dict):
+        bad.append(f"{c}: not a mapping"); continue
+    vip = d.get("vip")
+    if not isinstance(vip, dict):
+        bad.append(f"{c}: missing vip section"); continue
+    for k in ("id", "name", "vlnv", "lifecycle", "owner", "license"):
+        if not vip.get(k):
+            bad.append(f"{c}: vip.{k} missing")
+    if not vip.get("vlnv", "").startswith("aixsilicon:vip:") and not vip.get("vlnv", "").startswith("aix:vip:"):
+        bad.append(f"{c}: vlnv namespace unexpected: {vip.get('vlnv')}")
+    if not isinstance(d.get("protocol", {}), dict):
+        bad.append(f"{c}: missing protocol section")
+    if not isinstance(d.get("quality", {}), dict):
+        bad.append(f"{c}: missing quality section")
+for e in bad:
+    print("FAIL", e, file=sys.stderr)
+if bad:
+    sys.exit(1)
+print(f"structure OK: {len(glob.glob('**/metadata/vip.yaml', recursive=True))} vip.yaml parsed")
+EOF
+      - name: FuseSoC .core CAPI 与 VLNV namespace 门禁
+        run: python3 - <<'EOF'
+import glob, re, sys
+errs = []
+for c in sorted(glob.glob("**/*.core", recursive=True)):
+    t = open(c, encoding="utf-8").read()
+    if "CAPI=2:" not in t:
+        errs.append(f"{c}: missing CAPI=2")
+    m = re.search(r"name:\s*(\S+)", t)
+    if m and not m.group(1).startswith(("aix:vip:", "aixsilicon:vip:")):
+        errs.append(f"{c}: non-vip namespace {m.group(1)}")
+for e in errs:
+    print("FAIL", e, file=sys.stderr)
+if errs:
+    sys.exit(1)
+print("core gate OK")
+EOF
+      - name: 关键目录完整性
+        run: |
+          for d in schema docs common protocol peripheral system safety \
+                   adapters formal examples tests vendor catalog; do
+            test -d "$d" || { echo "缺少目录 $d"; exit 1; }
+          done
+      - name: 断言确定性工具已收编（tools/ 不复存在，统一走 vip-repo-maintainer）
+        run: |
+          test ! -d tools && echo "tools/ removed (deterministic entry is vip-repo-maintainer)" || (echo "FAIL: tools/ still present" && exit 1)
+
+  metadata-depth:
+    name: Metadata 深度校验（可选，依赖 skill 套件存在时）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: 安装依赖
+        run: pip install pyyaml
+      - name: 若 skill 套件可用则运行深度校验，否则跳过
+        run: |
+          if [ -d ../aixsilicon_skill_repo/skills/vip-repo-maintainer ]; then
+            SUITE_DIR=../aixsilicon_skill_repo/skills/vip-repo-maintainer
+            python3 ${SUITE_DIR}/scripts/vip_tool.py metadata-check --root . --all
+            python3 ${SUITE_DIR}/scripts/vip_tool.py testplan-check --root .
+            python3 ${SUITE_DIR}/scripts/vip_tool.py catalog --root . --check-only
+          else
+            echo "skill 套件不可用，跳过深度校验（self-contained 结构门禁已在上方执行）"
+          fi
 
   fusesoc-parse:
     name: FuseSoC Core 解析与 VLNV 检查
@@ -46,15 +121,3 @@ jobs:
           fusesoc --cores-root=. list-cores
           fusesoc --cores-root=. core show aix:vip:common:1.0.0
           fusesoc --cores-root=. core show aix:vip:apb:1.0.0
-
-  structure-lint:
-    name: 结构检查
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: 检查关键目录
-        run: |
-          for d in schema docs common protocol peripheral system safety \
-                   adapters formal examples tests vendor tools catalog; do
-            test -d "$d" || { echo "缺少目录 $d"; exit 1; }
-          done

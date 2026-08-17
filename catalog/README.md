@@ -10,8 +10,12 @@ UVM Verification Skill Suite 与项目自动选型/装配。
 
 ## 更新方式
 
+Catalog 由 `vip-repo-maintainer` 套件统一入口生成/对账（G2 一致性）：
+
 ```bash
-python3 tools/catalog_export/export_catalog.py
+SUITE_DIR="${SUITE_DIR:-.roo/skills/vip-repo-maintainer}"
+uv run python ${SUITE_DIR}/scripts/vip_tool.py catalog --root .          # 生成
+uv run python ${SUITE_DIR}/scripts/vip_tool.py catalog --root . --check-only  # 对账
 ```
 
 > 正式 Catalog 默认只显示 `Qualified` 与 `Proven` 版本；骨架阶段会列出所有登记项并标注 gate。

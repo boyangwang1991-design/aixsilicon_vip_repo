@@ -106,8 +106,8 @@ vip-repo/
 ├── docs/
 │   ├── architecture/
 │   ├── development-guide/
-│   ├── integration-guide/
-│   └── qualification/
+│   └── integration-guide/
+│   （qualification/ 方法已收编 skill vip-repo-maintainer）
 ├── schema/
 │   ├── vip_metadata.schema.yaml
 │   ├── testplan.schema.yaml
@@ -164,11 +164,7 @@ vip-repo/
 ├── vendor/
 │   ├── manifests/
 │   └── patches/
-├── tools/
-│   ├── metadata_check/
-│   ├── testplan_check/
-│   ├── package_release/
-│   └── catalog_export/
+├── （tools/ 已收编：统一入口 skill vip-repo-maintainer scripts/vip_tool.py）
 └── catalog/
     ├── vip_index.yaml
     └── compatibility_matrix.yaml

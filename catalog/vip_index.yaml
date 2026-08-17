@@ -1,4 +1,4 @@
-generated_by: tools/catalog_export/export_catalog.py
+generated_by: vip-repo-maintainer/scripts/vip_tool.py catalog
 schema_version: '1.0'
 vips:
 - gate: V0_PROTOTYPE

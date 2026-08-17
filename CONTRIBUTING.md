@@ -22,7 +22,9 @@
 
 ## 第三方资产准入流程
 
-任何开源资产进入正式仓库前必须经过以下 Gate（详见 [`docs/qualification/third_party_admission.md`](docs/qualification/third_party_admission.md)）：
+任何开源资产进入正式仓库前必须经过以下 Gate（详见
+[`vip-repo-maintainer`](../../aixsilicon_skill_repo/skills/vip-repo-maintainer/references/upstream-import-policy.md)
+之 `references/upstream-import-policy.md` §5 G0-G5）：
 
 - **G0 来源与许可证**：记录 URL、commit hash、tag、作者、许可证、NOTICE，生成 SBOM；
 - **G1 代码结构审计**：确认为可复用 VIP 而非单一 DUT 的 Testbench；
