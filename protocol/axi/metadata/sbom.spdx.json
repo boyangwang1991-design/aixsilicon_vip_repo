@@ -1,0 +1,82 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "aix:vip:axi:1.0.0",
+  "documentNamespace": "https://aixsilicon.com/spdx/vip/axi/1.0.0",
+  "creationInfo": {
+    "created": "2026-08-17T13:00:00Z",
+    "creators": ["Tool: aixsilicon-vip-tool"],
+    "licenseListVersion": "3.21"
+  },
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-Package-tvip-axi",
+      "name": "tvip-axi",
+      "versionInfo": "cd53d9275610438a1960e967b4b896c816d61ce6",
+      "downloadLocation": "https://github.com/taichi-ishitani/tvip-axi",
+      "filesAnalyzed": false,
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "Copyright (C) 2018 Taichi Ishitani",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:github/taichi-ishitani/tvip-axi@cd53d9275610438a1960e967b4b896c816d61ce6"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-tue",
+      "name": "tue",
+      "versionInfo": "b49856a47ed162fd0eea4509f2495465d0091e7f",
+      "downloadLocation": "https://github.com/taichi-ishitani/tue",
+      "filesAnalyzed": false,
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "Copyright (C) Taichi Ishitani",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:github/taichi-ishitani/tue@b49856a47ed162fd0eea4509f2495465d0091e7f"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-tvip-common",
+      "name": "tvip-common",
+      "versionInfo": "be09036727aac5be4c483536b12e7a1e3c0c8b8b",
+      "downloadLocation": "https://github.com/taichi-ishitani/tvip-common",
+      "filesAnalyzed": false,
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "Copyright (C) Taichi Ishitani",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:github/taichi-ishitani/tvip-common@be09036727aac5be4c483536b12e7a1e3c0c8b8b"
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-tvip-axi"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-tvip-axi",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-tue"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-tvip-axi",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-tvip-common"
+    }
+  ]
+}

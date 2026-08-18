@@ -1,0 +1,123 @@
+CAPI=2:
+# AIXSILICON AXI VIP — FuseSoC Core
+# VLNV: aix:vip:axi:1.0.0
+name: aix:vip:axi:1.0.0
+
+description: >-
+  AIXSILICON AXI4 UVM VIP：Master/Slave/Passive、outstanding、out-of-order、
+  read interleave、RAL adapter、Protocol Checker。
+  基于 TVIP-AXI (taichi-ishitani/tvip-axi) overlay 引入。
+
+filesets:
+  upstream_tue:
+    files:
+      - upstream/tue/src/tue_pkg.sv
+      - upstream/tue/src/tue_macros.svh
+      - upstream/tue/src/tue_defines.svh
+      - upstream/tue/src/tue_component_base.svh
+      - upstream/tue/src/tue_agent_base.svh
+      - upstream/tue/src/tue_driver_base.svh
+      - upstream/tue/src/tue_monitor_base.svh
+      - upstream/tue/src/tue_sequencer_base.svh
+      - upstream/tue/src/tue_sequence_base.svh
+      - upstream/tue/src/tue_item.svh
+      - upstream/tue/src/tue_configuration.svh
+      - upstream/tue/src/tue_status.svh
+      - upstream/tue/src/tue_memory.svh
+      - upstream/tue/src/tue_payload_store.svh
+      - upstream/tue/src/tue_random.svh
+    file_type: systemVerilogSource
+
+  upstream_tvip_common:
+    files:
+      - upstream/tvip-common/src/tvip_pkg.sv
+      - upstream/tvip-common/src/tvip_macros.svh
+      - upstream/tvip-common/src/tvip_defines.svh
+      - upstream/tvip-common/src/tvip_component_base.svh
+      - upstream/tvip-common/src/tvip_agent_base.svh
+      - upstream/tvip-common/src/tvip_driver_base.svh
+      - upstream/tvip-common/src/tvip_monitor_base.svh
+      - upstream/tvip-common/src/tvip_sequencer_base.svh
+      - upstream/tvip-common/src/tvip_sequence_base.svh
+      - upstream/tvip-common/src/tvip_item.svh
+      - upstream/tvip-common/src/tvip_configuration.svh
+      - upstream/tvip-common/src/tvip_status.svh
+      - upstream/tvip-common/src/tvip_memory.svh
+      - upstream/tvip-common/src/tvip_payload_store.svh
+      - upstream/tvip-common/src/tvip_random.svh
+    file_type: systemVerilogSource
+
+  rtl:
+    depend:
+      - aix:vip:common:^1.0
+    files:
+      - upstream/src/tvip_axi_types_pkg.sv
+      - upstream/src/tvip_axi_pkg.sv
+      - upstream/src/tvip_axi_if.sv
+      - upstream/src/tvip_axi_defines.svh
+      - upstream/src/tvip_axi_internal_macros.svh
+      - upstream/src/tvip_axi_undef_internal_macros.svh
+      - upstream/src/tvip_axi_component_base.svh
+      - upstream/src/tvip_axi_agent_base.svh
+      - upstream/src/tvip_axi_driver_base.svh
+      - upstream/src/tvip_axi_monitor_base.svh
+      - upstream/src/tvip_axi_sequencer_base.svh
+      - upstream/src/tvip_axi_sequence_base.svh
+      - upstream/src/tvip_axi_item.svh
+      - upstream/src/tvip_axi_configuration.svh
+      - upstream/src/tvip_axi_status.svh
+      - upstream/src/tvip_axi_payload_store.svh
+      - upstream/src/tvip_axi_memory.svh
+      - upstream/src/tvip_axi_master_agent.svh
+      - upstream/src/tvip_axi_master_driver.svh
+      - upstream/src/tvip_axi_master_monitor.svh
+      - upstream/src/tvip_axi_master_sequencer.svh
+      - upstream/src/tvip_axi_master_sequence_base.svh
+      - upstream/src/tvip_axi_master_read_sequence.svh
+      - upstream/src/tvip_axi_master_write_sequence.svh
+      - upstream/src/tvip_axi_master_access_sequence.svh
+      - upstream/src/tvip_axi_slave_agent.svh
+      - upstream/src/tvip_axi_slave_driver.svh
+      - upstream/src/tvip_axi_slave_monitor.svh
+      - upstream/src/tvip_axi_slave_data_monitor.svh
+      - upstream/src/tvip_axi_slave_sequencer.svh
+      - upstream/src/tvip_axi_slave_sequence_base.svh
+      - upstream/src/tvip_axi_slave_default_sequence.svh
+      - upstream/src/tvip_axi_ral_adapter.svh
+      - upstream/src/tvip_axi_ral_predictor.svh
+    file_type: systemVerilogSource
+
+  sample:
+    files:
+      - upstream/sample/env/tvip_axi_sample_pkg.sv
+      - upstream/sample/env/tvip_axi_sample_configuration.svh
+      - upstream/sample/env/tvip_axi_sample_test.svh
+      - upstream/sample/env/tvip_axi_sample_write_read_sequence.svh
+      - upstream/sample/env/tvip_axi_sample_delay.sv
+      - upstream/sample/env/top.sv
+    file_type: systemVerilogSource
+
+parameters:
+  UVM_HOME:
+    datatype: str
+    paramtype: vlogparam
+    description: UVM 源路径
+
+targets:
+  default:
+    filesets: [rtl]
+    description: 供其他 Core 依赖的默认包
+  lint:
+    filesets: [rtl]
+    description: 静态检查入口
+  smoke:
+    filesets: [upstream_tue, upstream_tvip_common, rtl, sample]
+    toplevel: [top]
+    description: 最小 Master—Slave 闭环（TVIP-AXI sample）
+  regression:
+    filesets: [upstream_tue, upstream_tvip_common, rtl, sample]
+    toplevel: [top]
+    description: 标准回归入口
+  package:
+    filesets: [rtl]
+    description: 生成正式发布包

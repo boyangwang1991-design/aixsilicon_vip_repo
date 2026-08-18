@@ -1,0 +1,29 @@
+# TVIP-AXI Provenance Record
+# 依据 upstream-import-policy.md §4 要求
+
+origin:
+  type: upstream
+  repository: https://github.com/taichi-ishitani/tvip-axi
+  revision: cd53d9275610438a1960e967b4b896c816d61ce6
+  imported_version: 2024-06-28
+  imported_at: 2026-08-17
+  license: Apache-2.0
+  local_modification_strategy: overlay
+  modifications:
+    - id: AIX-IMPORT-001
+      summary: 初始引入，按 overlay 策略隔离上游代码与本地适配
+      files: []
+    - id: AIX-IMPORT-002
+      summary: 添加 FuseSoC core 文件与 aixsilicon adapter 框架
+      files: []
+
+compliance:
+  license_check: PASS
+  notice_required: false
+  copyright_preserved: true
+  sbom_generated: false
+
+notes:
+  - 上游项目无 NOTICE 文件，但 LICENSE 为 Apache-2.0（白名单内）
+  - 上游代码保持原样于 upstream/ 目录
+  - 本地适配、wrapper、patch 放置于 aixsilicon/ 目录

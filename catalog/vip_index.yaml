@@ -55,3 +55,16 @@ vips:
   protocol: Interrupt
   tools: {questa: unsupported, vcs: unsupported, verilator: unsupported, xcelium: unsupported}
   vlnv: aix:vip:interrupt:1.0.0
+- gate: V0_PROTOTYPE
+  id: VIP-AXI-001
+  lifecycle: prototype
+  modes: [active_master, active_slave, passive]
+  name: axi
+  path: protocol/axi
+  protocol: AXI4
+  provenance:
+    derived_from:
+    - taichi-ishitani/tvip-axi@cd53d9275610438a1960e967b4b896c816d61ce6
+    license: Apache-2.0
+  tools: {questa: unsupported, vcs: beta, verilator: unsupported, xcelium: beta}
+  vlnv: aix:vip:axi:1.0.0
