@@ -16,9 +16,9 @@
 name: ci
 
 on:
-  pull_request:
-  push:
-    branches: [main]
+  # CI disabled (2026-08): local-first workflow; restore pull_request/push
+  # triggers to re-enable.
+  workflow_dispatch:
 
 jobs:
   structure-gate:
