@@ -1,835 +1,1047 @@
-# AIXSILICON VIP Repository 完整实现规划
+我建议把 `aixsilicon-vip-repo` 做成一个非常“干净”的**认证 VIP 资产库**：它不负责开发过程，而只负责**规划、准入、版本化、发布、FuseSoC 分发和质量管理**。
 
-> 版本：V1.0  
-> 日期：2026-08-12  
-> 适用范围：IP设计、CBB验证、Subsystem验证、SoC集成验证  
-> 工程底座：SystemVerilog/UVM、FuseSoC、YAML SSOT、SystemRDL/PeakRDL、统一Catalog、DVSim/EDA适配层
+也就是说：
 
----
+> **VIP Development Suite = VIP 工厂**
+> **VIP REPO = 经过验收的 VIP 产品货架**
 
-## 1. 建设结论
+这样边界会非常清楚。
 
-VIP Repo的目标不是收集零散UVM代码，而是建设一套可版本化、可组合、可验证、可发布、可被RTL Coding/UVM Verification Skill Suite消费的验证资产平台。
-
-建议当前采用：
-
-> **一个VIP Monorepo + 每个VIP独立FuseSoC Core + 统一公共基类 + 统一Release Catalog索引。**
-
-不建议第一阶段将APB、AXI、UART等拆成多个Git仓库。VIP之间共享transaction policy、agent基类、异常注入、coverage、日志和RAL适配，过早拆仓会显著增加协同成本。以下类型成熟后可单独拆仓：
-
-- PCIe/CXL、DDR/LPDDR、USB、Ethernet TSN、MIPI等大型VIP；
-- 受特殊协议授权或出口管制约束的VIP；
-- 由独立团队维护、具有独立发布节奏的VIP；
-- 单个VIP代码、文档及测试规模超过仓库整体约20%，或需要单独访问控制。
-
-### 1.1 建设目标
-
-1. 支持IP级、CBB级、Subsystem级和SoC级验证；
-2. 支持Active Master、Active Slave、Passive Monitor等标准模式；
-3. 支持协议激励、协议检查、数据检查、功能覆盖、异常注入和性能测量；
-4. 通过FuseSoC统一管理依赖、fileset、target、参数和工具入口；
-5. 通过稳定VLNV、SemVer、Release Manifest和Catalog实现可信复用；
-6. 让UVM Verification Skill Suite优先装配已有VIP，而不是重复生成Agent；
-7. 支持VCS、Xcelium、Questa等商业仿真器，选择性支持Verilator/cocotb交叉验证；
-8. 形成可追踪的需求—测试—覆盖—结果—发布证据链。
-
-### 1.2 非目标
-
-- 不把项目专用Testbench、Scoreboard和Testcase全部放入VIP Repo；
-- 不在VIP中复制IP RTL或SoC Top RTL；
-- 不将第三方商业VIP源码纳入公共仓库；
-- 不声明“兼容某协议”而没有对应协议版本、测试和覆盖证据；
-- 不直接将教学型GitHub示例作为正式VIP发布；
-- 不用FuseSoC替代Regression Scheduler、结果数据库或质量Dashboard。
+FuseSoC 本身非常适合做这一层分发：它会递归扫描 library 下的 `.core` 文件，可以把整个 VIP REPO 直接注册为一个 FuseSoC library；core 用 VLNV 做唯一标识，也支持 filesets、targets 和 dependency 管理。([FuseSoC][1])
 
 ---
 
-## 2. 仓库边界
+# 1. VIP REPO 的核心定位
 
-| 资产 | 所属仓库 | 说明 |
-|---|---|---|
-| 通用UVM基类、通用Scoreboard框架 | `dv-common` | 所有VIP和项目环境共同依赖 |
-| AXI/APB/UART等协议Agent | `vip-repo` | 本仓库核心内容 |
-| SV interface、typedef、modport、接口语义 | `hw-interfaces` | 设计与验证共享的接口契约 |
-| 项目专用Env、Virtual Sequence、Testcase | IP或SoC项目仓库 | 与被测对象版本绑定 |
-| 通用协议SVA、Protocol Checker | `vip-repo` | 与对应VIP共同发布 |
-| CSR定义 | 所属IP的SystemRDL | 不在VIP重复定义 |
-| UVM RAL生成工具 | `eda-flow`或工具仓 | VIP提供adapter/predictor |
-| SoC地址、中断、时钟复位配置 | `soc-integration` | VIP只提供对应激励/监测组件 |
-| 商业VIP适配器 | 受控内部仓库 | 与开源VIP隔离，遵守许可证 |
+我建议定义成：
 
----
+**AIXSILICON VIP REPO**
 
-## 3. 总体架构
+> 面向 IP / SoC 验证的标准化、可复用、可版本管理的 Verification IP 资产仓库。
+> 仓库原则上只接收由 `VIP Development Suite` 开发并通过质量门禁的 VIP，并通过 FuseSoC 提供统一发现、依赖和调用能力。
 
-```mermaid
-flowchart TD
-    DUT["IP / CBB / Subsystem / SoC"]
-    IF["Interface Contract"]
-    AGT["Protocol Agent"]
-    SYS["System Service VIP"]
-    CHK["Checker / Coverage / SVA"]
-    COM["DV Common"]
-    FLOW["FuseSoC + DV Flow"]
+它重点解决五件事情：
 
-    IF --> DUT
-    IF --> AGT
-    COM --> AGT
-    AGT --> DUT
-    SYS --> DUT
-    AGT --> CHK
-    DUT --> CHK
-    FLOW --> AGT
-    FLOW --> CHK 
-```
-
-VIP组件按职责分为六层：
-
-1. **Interface Layer**：虚接口绑定、clocking block、modport和信号采样；
-2. **Transaction Layer**：协议事务、约束、pack/unpack、compare和打印；
-3. **Agent Layer**：sequencer、driver、monitor、master/slave responder；
-4. **Service Layer**：memory model、RAL adapter、interrupt、clock/reset、fault injection；
-5. **Checking Layer**：protocol checker、scoreboard adapter、SVA和coverage；
-6. **Packaging Layer**：FuseSoC Core、metadata、测试、文档和Release Manifest。
+1. **我们需要哪些 VIP**
+2. **现在哪些 VIP 已经有了**
+3. **每个 VIP 能不能放心用**
+4. **怎么一条命令拉入验证工程**
+5. **VIP 怎么持续升级而不会影响已有项目**
 
 ---
 
-## 4. 推荐目录结构
+# 2. 整个 REPO 不要设计得太复杂
+
+我推荐：
 
 ```text
-vip-repo/
+aixsilicon-vip-repo/
+│
 ├── README.md
-├── LICENSES/
-├── CONTRIBUTING.md
-├── CODEOWNERS
+├── vip_plan.md
+├── vip_catalog.md
+│
+├── vip/
+│   ├── amba/
+│   │   ├── axi4/
+│   │   ├── axi4_lite/
+│   │   ├── apb/
+│   │   └── ahb/
+│   │
+│   ├── peripheral/
+│   │   ├── uart/
+│   │   ├── spi/
+│   │   ├── i2c/
+│   │   └── gpio/
+│   │
+│   ├── memory/
+│   │   ├── sram/
+│   │   └── ddr/
+│   │
+│   ├── chip/
+│   │   ├── interrupt/
+│   │   ├── clock_reset/
+│   │   └── power/
+│   │
+│   └── ...
+│
+├── templates/
+│   └── vip-template/
+│
+├── docs/
+│   ├── vip-standard.md
+│   ├── quality-standard.md
+│   ├── version-policy.md
+│   └── contribution-guide.md
+│
+└── tools/
+    ├── check_vip.py
+    ├── gen_catalog.py
+    └── regression.py
+```
+
+我反而**不推荐**建立很多诸如 `registry/metadata/database/releases/...` 的复杂目录。
+
+FuseSoC `.core` 本身已经承担了相当一部分机器可读描述。
+
+---
+
+# 3. 每个 VIP 应该是一个完整、独立的产品
+
+例如：
+
+```text
+vip/amba/axi4/
+│
+├── README.md
 ├── CHANGELOG.md
+├── aixsilicon_vip_axi4.core
+│
 ├── docs/
-│   ├── architecture/
-│   ├── development-guide/
-│   └── integration-guide/
-│   （qualification/ 方法已收编 skill vip-repo-maintainer）
-├── schema/
-│   ├── vip_metadata.schema.yaml
-│   ├── testplan.schema.yaml
-│   ├── coverage.schema.yaml
-│   └── release_manifest.schema.yaml
-├── common/
-│   ├── vip_common_pkg/
-│   ├── transaction_policy/
-│   ├── fault_injection/
-│   ├── coverage_utils/
-│   └── report_adapter/
-├── protocol/
-│   ├── apb/
-│   ├── axi_lite/
-│   ├── axi/
-│   ├── axi_stream/
-│   ├── ahb_lite/
-│   └── ready_valid/
-├── peripheral/
-│   ├── uart/
-│   ├── spi/
-│   ├── i2c/
-│   ├── gpio/
-│   └── jtag_dmi/
-├── system/
-│   ├── clock_reset/
-│   ├── interrupt/
-│   ├── generic_memory/
-│   ├── csr_access/
-│   ├── dma_traffic/
-│   ├── boot_host/
-│   └── power_state/
-├── safety/
-│   ├── bus_fault/
-│   ├── ecc_parity_fault/
-│   ├── interrupt_fault/
-│   ├── clock_reset_fault/
-│   └── fault_campaign/
-├── adapters/
-│   ├── ral/
-│   ├── scoreboard/
-│   ├── commercial_vip/
-│   └── cocotb_crosscheck/
-├── formal/
-│   ├── protocol_properties/
-│   └── harness/
-├── examples/
-├── tests/
-│   ├── unit/
-│   ├── compatibility/
-│   ├── negative/
-│   ├── stress/
-│   └── mutation/
-├── vendor/
-│   ├── manifests/
-│   └── patches/
-├── （tools/ 已收编：统一入口 skill vip-repo-maintainer scripts/vip_tool.py）
-└── catalog/
-    ├── vip_index.yaml
-    └── compatibility_matrix.yaml
-```
-
-`vendor/`只保存来源Manifest、锁定commit、许可证、补丁和SBOM信息。若直接引入第三方源码，必须保留原始版权和许可证；优先通过FuseSoC依赖外部已发布Core，而不是复制源码。
-
----
-
-## 5. 单个VIP标准模板
-
-```text
-protocol/apb/
-├── README.md
-├── docs/
-│   ├── requirements.md
 │   ├── architecture.md
-│   ├── user_guide.md
-│   ├── testplan.md
-│   └── coverage_plan.md
-├── metadata/
-│   ├── vip.yaml
-│   ├── compatibility.yaml
-│   └── release_manifest.yaml
+│   ├── user-guide.md
+│   ├── configuration.md
+│   └── limitation.md
+│
 ├── src/
-│   ├── apb_pkg.sv
-│   ├── apb_if.sv
-│   ├── apb_item.sv
-│   ├── apb_config.sv
-│   ├── apb_agent.sv
-│   ├── apb_sequencer.sv
-│   ├── apb_master_driver.sv
-│   ├── apb_slave_driver.sv
-│   ├── apb_monitor.sv
-│   ├── apb_coverage.sv
-│   ├── apb_checker.sv
-│   └── apb_ral_adapter.sv
-├── sva/
-├── seq/
-│   ├── base/
-│   ├── normal/
-│   ├── stress/
-│   └── negative/
-├── tb/
-├── tests/
+│   ├── axi4_pkg.sv
+│   │
+│   ├── transaction/
+│   │   └── axi4_item.sv
+│   │
+│   ├── agent/
+│   │   ├── axi4_agent.sv
+│   │   ├── axi4_driver.sv
+│   │   ├── axi4_monitor.sv
+│   │   └── axi4_sequencer.sv
+│   │
+│   ├── sequences/
+│   │   ├── axi4_base_sequence.sv
+│   │   ├── axi4_read_sequence.sv
+│   │   └── axi4_write_sequence.sv
+│   │
+│   ├── coverage/
+│   │   └── axi4_coverage.sv
+│   │
+│   ├── checker/
+│   │   ├── axi4_checker.sv
+│   │   └── axi4_assertions.sv
+│   │
+│   └── env/
+│       └── axi4_env.sv
+│
 ├── examples/
-├── aix_vip_apb_1.0.0.core
-└── CHANGELOG.md
+│   ├── smoke/
+│   └── master_slave/
+│
+├── tests/
+│   ├── smoke/
+│   ├── protocol/
+│   ├── error/
+│   └── random/
+│
+└── quality/
+    └── qualification.md
 ```
 
-### 5.1 FuseSoC Target规范
+这里有一个重要原则：
 
-每个VIP至少提供：
+> **一个 VIP 目录拿出来，本身就应该能够独立理解、独立验证、独立发布。**
 
-| Target | 作用 |
-|---|---|
-| `default` | 作为其他Core依赖时提供package/interface/agent |
-| `lint` | 编译结构和静态规则检查 |
-| `unit_sim` | VIP单元测试 |
-| `smoke` | 最小Master—Slave闭环 |
-| `regression` | 标准回归入口 |
-| `negative` | 非法时序、错误响应和协议异常测试 |
-| `example` | 最小集成示例 |
-| `formal` | 协议属性或Checker形式验证，可选 |
-| `package` | 生成正式发布包 |
+---
 
-推荐VLNV：
+# 4. 一个“优秀 VIP”应该包含什么
+
+我建议 VIP Development Suite 和 VIP REPO 共用一套 Definition of Done。
+
+可以归纳成八部分。
+
+| 维度              | 必备内容                                            |
+| --------------- | ----------------------------------------------- |
+| Interface Model | interface / clocking block / config             |
+| Transaction     | sequence item / transaction definition          |
+| Stimulus        | sequencer / sequence library                    |
+| Driver          | 主动驱动协议                                          |
+| Monitor         | 被动监听、transaction reconstruction                 |
+| Checking        | protocol checker / scoreboard / reference model |
+| Coverage        | functional coverage                             |
+| Assertions      | protocol / timing SVA                           |
+| Environment     | agent / env / virtual interface                 |
+| Test            | smoke / normal / corner / error / random        |
+| Documentation   | architecture / usage / config / limitation      |
+| Package         | FuseSoC `.core`                                 |
+| Quality         | regression / coverage / lint / known issues     |
+
+其中我尤其建议把下面四样定义为**优秀 VIP 的关键指标**：
+
+### A. Passive mode
+
+不仅能主动激励 DUT，还应该能：
 
 ```text
-aix:vip:common:1.0.0
-aix:vip:apb:1.0.0
-aix:vip:axi_lite:1.0.0
-aix:vip:axi:1.0.0
-aix:vip:uart:1.0.0
-aix:vip:clock_reset:1.0.0
+Active VIP
+    Driver
+    Monitor
+    Sequencer
+
+Passive VIP
+    Monitor
+    Checker
+    Coverage
 ```
 
-VIP内部参数不要依赖大量编译宏。协议结构性差异使用参数、config object、policy class或独立VLNV；只允许用宏解决UVM注册、工具兼容和条件编译等必要问题。
+因为 SoC 集成阶段大量场景其实只需要 Monitor + Checker。
 
 ---
 
-## 6. VIP公共API与设计规范
+### B. Protocol checker
 
-### 6.1 Agent模式
+例如 AXI：
 
-所有协议Agent统一支持：
+```text
+AWVALID/AWREADY
+WVALID/WREADY
+BVALID/BREADY
 
-- `ACTIVE_MASTER`；
-- `ACTIVE_SLAVE`；
-- `PASSIVE`；
-- `DISABLED`；
-- 可以只启用Monitor、Checker或Coverage；
-- Agent数量和实例名可配置；
-- 配置必须通过config object传递，不允许依赖全局变量。
+ARVALID/ARREADY
+RVALID/RREADY
 
-### 6.2 统一端口
+burst length
+burst boundary
+ID ordering
+response
+outstanding
+...
+```
 
-每个Monitor至少提供：
+VIP 不应该只是：
 
-- `transaction_ap`：完整事务；
-- `request_ap`和`response_ap`：需要分离建模时提供；
-- `error_ap`：协议错误和异常事件；
-- `performance_ap`：延迟、带宽、stall等性能事件，可选。
+> “帮我发 AXI transaction。”
 
-### 6.3 统一能力
+而应该能够回答：
 
-每个正式VIP必须具备：
-
-1. 正常事务生成；
-2. backpressure和随机延迟；
-3. reset中断事务；
-4. X/Z检测策略；
-5. timeout机制；
-6. 协议错误检测；
-7. 合法错误响应注入；
-8. Functional Coverage；
-9. RAL或Scoreboard适配；
-10. 自检测试和最小示例；
-11. 多实例运行；
-12. 固定随机种子可复现；
-13. 仿真器兼容矩阵；
-14. 性能开销可测量。
-
-### 6.4 数据比较策略
-
-禁止只依靠`uvm_object::compare()`完成所有检查。统一支持：
-
-- 字段级compare policy；
-- 允许忽略不稳定字段；
-- 4-state严格比较与2-state模型比较；
-- masked compare；
-- order-aware和out-of-order compare；
-- transaction ID关联；
-- mismatch必须可失败并输出原始证据。
+> **“这个 AXI 行为是不是合法。”**
 
 ---
 
-## 7. VIP建设清单与优先级
+### C. Coverage model
 
-### 7.1 P0：最小可用闭环
+例如：
 
-| VIP | 首期能力 | 原因 |
+```text
+Burst Type
+× Burst Length
+× Transfer Size
+× Response
+× Outstanding
+× ID
+× Backpressure
+```
+
+这样 VIP 才真正成为验证资产。
+
+---
+
+### D. Self Qualification
+
+VIP 自己必须有测试 VIP 的测试。
+
+也就是：
+
+```text
+DUT test
+        ↓
+      VIP
+
+同时：
+
+VIP
+ ↓
+VIP Self Test
+```
+
+否则非常容易出现：
+
+> DUT bug 还是 VIP bug？
+
+说不清楚。
+
+---
+
+# 5. vip_plan.md 很重要
+
+你提到 **Plan VIP List**，我非常赞成。
+
+而且按照你整个 AIXSILICON 的方法，我依然建议：
+
+> **Markdown 是人和 Agent 的 SSOT。**
+
+而不是让人直接维护 YAML。
+
+例如：
+
+```markdown
+# AIXSILICON VIP Plan
+
+## AMBA
+
+| VIP | Priority | Status | Version | Owner | Capability |
+|---|---|---|---|---|---|
+| AXI4 | P0 | Qualified | 1.0.0 | xxx | Master/Slave/Monitor |
+| AXI4-Lite | P0 | Developing | - | xxx | Master/Slave |
+| APB4 | P0 | Planned | - | - | Master/Slave |
+| AHB-Lite | P1 | Planned | - | - | Master/Slave |
+
+## Peripheral
+
+| VIP | Priority | Status |
 |---|---|---|
-| Clock/Reset VIP | 多时钟、复位序列、reset glitch、动态频率 | 所有环境依赖 |
-| Ready/Valid VIP | Source/Sink/Monitor、随机stall、packet模式 | CBB与数据通路高频使用 |
-| APB VIP | Master/Slave/Passive、wait/error、RAL | 最适合验证基础架构 |
-| AXI4-Lite VIP | 独立读写、backpressure、error、RAL | CSR和SoC外设高频使用 |
-| Generic Memory VIP | SRAM/ROM模型、延迟、错误注入、backdoor | IP与SoC普遍需要 |
-| Interrupt VIP | pulse/level、mask、priority、storm、丢失/重复 | SoC集成与PIC需要 |
-| VIP Common | 公共配置、transaction policy、日志、结果 | 防止各VIP重复造轮子 |
+| UART | P0 | Planned |
+| SPI | P0 | Planned |
+| I2C | P0 | Planned |
+| GPIO | P1 | Planned |
 
-### 7.2 P1：IP和SoC主干协议
+## Chip Infrastructure
 
-| VIP | 关键能力 |
+| VIP | Priority |
 |---|---|
-| AXI4 VIP | Burst、ID、Outstanding、乱序、窄传输、4KB边界、exclusive/atomic策略 |
-| AXI-Stream VIP | packet、TKEEP/TSTRB/TLAST/TID/TDEST/TUSER、backpressure |
-| AHB-Lite VIP | Master/Slave/Passive、split/error策略按选定协议版本实现 |
-| UART VIP | 波特率、数据位、校验、stop bit、break、framing/parity error |
-| SPI/QSPI VIP | Mode 0~3、bit order、chip select、single/dual/quad、错误注入 |
-| I2C VIP | Controller/Target、ACK/NACK、clock stretch、arbitration、repeated start |
-| JTAG/DMI VIP | TAP状态机、IR/DR、DMI request/response、超时与错误 |
-| CSR Access Service | Frontdoor/Backdoor、mirror、reset、access policy、RAL predictor |
+| Interrupt | P0 |
+| Clock/Reset | P0 |
+| SRAM | P0 |
+```
 
-### 7.3 P2：系统与功能安全
-
-| VIP | 关键能力 |
-|---|---|
-| DMA Traffic VIP | 地址分布、burst、并发、带宽/延迟模型 |
-| Boot Host VIP | ROM/Flash加载、boot strap、启动状态监测 |
-| Power State VIP | power state、isolation、retention、wake-up事件 |
-| ECC/Parity Fault VIP | 单比特/多比特、地址/数据/控制路径故障 |
-| Bus Fault VIP | timeout、decode error、response corruption、stuck channel |
-| Interrupt Fault VIP | stuck-at、lost、duplicate、storm、late interrupt |
-| Fault Campaign | Fault ID、注入窗口、预期机制、检测时间、覆盖与证据 |
-
-### 7.4 暂不建议自研的复杂VIP
-
-PCIe/CXL、DDR/LPDDR、USB、MIPI、完整Ethernet/TSN、CHI/ACE等协议复杂、标准版本多、合规测试成本高。第一阶段应采用商业VIP或受控合作资产；内部仓库只提供统一adapter、traffic abstraction和结果接口。除非形成专职团队和明确产品化目标，否则不建议从零实现。
-
----
-
-## 8. 开源VIP与参考项目调研
-
-### 8.1 推荐候选矩阵
-
-| 项目 | 可参考内容 | 技术/许可证 | 建议动作 | 采用等级 |
-|---|---|---|---|---|
-| [Accellera UVM Core](https://github.com/accellera-official/uvm-core) | IEEE 1800.2 UVM参考实现 | SystemVerilog，Apache-2.0 | 作为标准依赖与兼容基线，不修改后复制 | A |
-| [OpenTitan](https://github.com/lowRISC/opentitan) `hw/dv/sv` | CIP Base、TL Agent、UART/SPI/I2C/JTAG Agent、push-pull、CSR utilities、coverage与DV方法 | SV/UVM，仓库默认Apache-2.0 | 重点研究架构、质量Gate和外设Agent；去除TL-UL及Monorepo耦合后局部复用 | A |
-| [TVIP-AXI](https://github.com/taichi-ishitani/tvip-axi) | AXI4/AXI4-Lite Master/Slave、乱序、延迟、RAL adapter/predictor | SV/UVM，Apache-2.0 | 作为AXI代码起点候选；先补协议覆盖、SVA、更多工具兼容和完整自测 | A- |
-| [TVIP-APB](https://github.com/taichi-ishitani/tvip-apb) | APB UVM VIP | SV/UVM，Apache-2.0 | 与自研APB骨架做对比PoC，择优重构 | B+ |
-| [PULP common_verification](https://github.com/pulp-platform/common_verification) | clk/reset、timeout、ready/valid master/slave、随机等待、watchdog | SystemVerilog，含FuseSoC Core | 适合直接依赖或重构进入DV Common，需核对具体许可证文件 | A- |
-| [PULP AXI](https://github.com/pulp-platform/axi) | AXI类型、测试组件、压力场景、宽度/ID转换DUT、CI测试 | SystemVerilog，Solderpad系许可证 | 用作AXI VIP对拍DUT和极限场景参考，不作为主UVM架构 | A- |
-| [CORE-V-VERIF](https://github.com/openhwgroup/core-v-verif) | 工业级UVM环境、公共lib、OBI Agent、日志、CPU软件测试、ISS比较 | SV/UVM，项目含Solderpad/Apache等内容，逐文件核查 | 参考SoC/CPU环境分层、BSP/ISS/软件用例协同；不整仓移植 | A- |
-| [CHIPS Alliance riscv-dv](https://github.com/chipsalliance/riscv-dv) | RISC-V随机指令生成与覆盖 | SV/UVM，Apache-2.0 | 作为CPU验证扩展接入，不归类为通用总线VIP | A |
-| [cocotbext-axi](https://github.com/alexforencich/cocotbext-axi) | AXI/AXI-Lite/AXI-Stream/APB Python BFM与Memory Model | Python/cocotb，MIT | 作为独立oracle、快速原型和交叉验证模型，不替代UVM VIP | A- |
-| [ZipCPU wb2axip](https://github.com/ZipCPU/wb2axip) | AXI-Lite、APB、Wishbone等形式属性与反例经验 | SVA/Formal，Apache-2.0 | 参考协议属性和负向测试；注意其Full AXI属性在主分支并不完整 | B+ |
-| [Accellera OVL](https://www.accellera.org/downloads/standards/ovl) | 通用Assertion Checker | Verilog/SV等，Apache-2.0条款 | 作为公共Assertion基础依赖，不替代协议专用SVA | B+ |
-| [PULP uvm-components](https://github.com/pulp-platform/uvm-components) | 历史UVM组件和FuseSoC打包示例 | SV/UVM，Apache-2.0 | 仅作历史参考；该仓库已于2025-11-28归档 | C |
-
-采用等级含义：
-
-- **A**：优先评估，可直接形成正式依赖或关键参考；
-- **A-**：高价值，但需要适配、重构或许可证逐文件审计；
-- **B+**：适合局部能力、测试思想或交叉验证；
-- **C**：只作历史/教学参考，不作为新架构基础。
-
-### 8.2 最有价值的OpenTitan目录
-
-重点检查：
+然后 Agent 自动提取：
 
 ```text
-hw/dv/sv/
-├── cip_lib/
-├── dv_utils/
-├── csr_utils/
-├── tl_agent/
-├── push_pull_agent/
-├── uart_agent/
-├── spi_agent/
-├── i2c_agent/
-└── jtag_agent/
+vip_plan.md
+     ↓
+gen_catalog.py
+     ↓
+vip_catalog.yaml
+     ↓
+AIXSILICON平台
 ```
 
-OpenTitan的价值主要不是直接拿到AXI VIP，而是参考以下工程方法：
+这样未来 AIXSILICON 页面上可以直接显示：
 
-- 公共Agent与IP专用Env分离；
-- Base Env、CSR访问、scoreboard和coverage的统一组织；
-- IP级DV文档、测试计划、覆盖计划和回归结果关联；
-- 多IP共享DV组件；
-- Full-chip环境复用IP级Agent。
+```text
+VIP Catalog
 
-需要主动剥离的耦合包括：TL-UL、CIP基类、HJSON/DVSim配置、OpenTitan目录假设、专用alert/interrupt语义。你的仓库继续统一到YAML SSOT和FuseSoC，不复制HJSON体系。
-
-### 8.3 开源代码发现渠道
-
-1. GitHub组织：`lowRISC`、`pulp-platform`、`openhwgroup`、`chipsalliance`、`accellera-official`；
-2. GitHub检索式：
-   - `language:SystemVerilog uvm_agent axi license:apache-2.0`
-   - `language:SystemVerilog uvm_driver spi`
-   - `path:*.core verification uvm`
-   - `path:LICENSE uvm vip apb`
-3. [Awesome Open Hardware Verification](https://github.com/ben-marshall/awesome-open-hardware-verification)用于候选发现，但最终结论必须回到原始仓库；
-4. Accellera官方UVM、OVL和VIP Recommended Practices；
-5. 开源SoC/IP项目的`dv/`、`tb/`、`verification/`和`vendor_lib/`目录；
-6. 商业EDA工具随附的UVM示例只能用于学习，是否可复制必须检查授权。
-
----
-
-## 9. 第三方VIP准入流程
-
-任何开源资产进入正式仓库前必须经过以下流程：
-
-```mermaid
-flowchart LR
-    FIND["候选发现"] --> LIC["许可证/SBOM"]
-    LIC --> AUDIT["协议与代码审计"]
-    AUDIT --> POC["隔离PoC"]
-    POC --> CROSS["双模型交叉验证"]
-    CROSS --> QUAL["内部Qualification"]
-    QUAL --> RELEASE["正式发布"]
+AMBA                 4 / 7
+Peripheral           3 / 8
+Memory               2 / 5
+Chip Infrastructure  5 / 9
 ```
 
-### G0：来源与许可证
+---
 
-- 记录仓库URL、commit hash、tag、作者、许可证和NOTICE；
-- 检查仓库级许可证与文件头是否一致；
-- 检查依赖、submodule、生成代码和协议规范授权；
-- 生成SBOM；
-- GPL/AGPL、未知许可证或仅限非商业使用的资产默认不进入正式库；
-- Apache/Solderpad/MIT等也必须经过公司法务或开源办公室确认。
+# 6. VIP 生命周期建议非常简单
 
-### G1：代码结构审计
+不要搞太多状态。
 
-- 是否是真正可复用VIP，而非单一DUT的Testbench；
-- 是否支持Master/Slave/Passive；
-- 是否存在全局变量、硬编码层次路径、固定宽度和固定实例名；
-- 是否依赖特定仿真器私有语法；
-- 是否有可运行测试、coverage、checker和文档；
-- 是否存在未锁定外部依赖。
+我建议就：
 
-### G2：协议符合性审计
+```text
+Planned
+   ↓
+Developing
+   ↓
+Qualified
+   ↓
+Deprecated
+```
 
-- 建立协议条款—Requirement ID—Test ID—Coverage ID映射；
-- 审计正常、边界、异常和reset行为；
-- 独立检查driver和monitor，避免两者共享同一个错误假设；
-- Protocol Checker不能只检查数据结果，还要检查信号时序和稳定性；
-- 未覆盖功能必须在compatibility metadata中明确声明。
+其中：
 
-### G3：隔离PoC
+### Planned
 
-- 用最小Master—Slave loopback运行；
-- 用至少两个独立DUT验证；
-- 对接至少两个仿真器；
-- 注入已知协议错误，确认Checker真实报错；
-- 固定种子重跑，确认可复现。
+只出现在：
 
-### G4：交叉验证
+```text
+vip_plan.md
+```
 
-建议至少使用两种独立实现交叉检查：
-
-- 内部UVM Master ↔ cocotbext或PULP参考Slave；
-- TVIP Master ↔ 内部Slave；
-- 内部Master ↔ PULP AXI模块；
-- 协议SVA ↔ 故意带Bug的mutation DUT；
-- 商业VIP ↔ 内部VIP，条件允许时执行。
-
-### G5：内部重构与发布
-
-- 适配统一interface contract；
-- 适配统一config、analysis port、error event和coverage API；
-- 形成FuseSoC Core；
-- 补齐需求、架构、用户指南、测试计划和覆盖计划；
-- 通过Qualification后再发布内部VLNV；
-- 不隐去第三方版权，不将内部重构声称为完全自研。
+目录甚至都不需要存在。
 
 ---
 
-## 10. 测试与Qualification体系
+### Developing
 
-### 10.1 测试层次
+在 VIP Development Suite 的开发 workspace 中。
 
-| 层次 | 目标 |
-|---|---|
-| Structure Test | 文件、metadata、VLNV、依赖、Schema正确 |
-| Compile Test | 多仿真器编译和elaboration通过 |
-| Component Unit Test | transaction、config、sequence、driver、monitor单元行为正确 |
-| Loopback Test | Master—Slave—Monitor闭环 |
-| Checker Negative Test | 每一类协议错误都能被检测 |
-| Reference DUT Test | 在开源或内部黄金DUT上验证 |
-| Cross-model Test | 与独立VIP/BFM对拍 |
-| Stress Test | 长时间、随机stall、多Outstanding、reset打断 |
-| Mutation Test | 人为注入DUT或VIP缺陷，验证检测能力 |
-| Integration Test | 在真实IP、CBB和Subsystem中复用 |
-
-### 10.2 质量Gate
-
-| Gate | 出口条件 |
-|---|---|
-| V0 Prototype | 单仿真器编译，基本事务跑通，不允许正式项目依赖 |
-| V1 Alpha | Master/Slave/Passive基本完成，单元测试通过 |
-| V2 Beta | 两个DUT、两个仿真器、基础coverage和negative test通过 |
-| V3 Qualified | RTM闭环、协议覆盖达标、mutation test通过、文档齐全 |
-| V4 Proven | 至少两个项目使用并完成问题闭环，兼容矩阵稳定 |
-
-正式Catalog默认只显示`Qualified`和`Proven`版本。
-
-### 10.3 建议指标
-
-- Requirement覆盖率：100%；
-- Planned Test执行率：100%；
-- Planned Functional Coverage覆盖率：100%，覆盖点命中率按协议设Gate；
-- 所有P0/P1 Protocol Checker负向用例：100%检测；
-- 严重等级S0/S1缺陷：0；
-- 至少VCS/Xcelium/Questa中的两种通过；
-- 同一seed和同一工具版本可复现；
-- Release包包含命令、工具版本、日志hash、源码hash和依赖锁定；
-- 公共VIP不允许存在未声明的项目层次路径依赖。
+**原则上不要进入正式 VIP REPO。**
 
 ---
 
-## 11. CI/CD与发布
+### Qualified
 
-### 11.1 Pull Request流水线
+通过：
 
-1. YAML/Schema/格式检查；
-2. 许可证和SBOM检查；
-3. FuseSoC Core解析、依赖闭包和VLNV重复检查；
-4. Lint与编译；
-5. 受影响VIP的unit/smoke/negative测试；
-6. RTM、Testplan和Coverage ID完整性检查；
-7. 文档构建；
-8. 生成影响分析报告。
+```text
+Structure Check
+Lint
+Compile
+Smoke
+Regression
+Protocol Check
+Coverage
+Documentation Check
+FuseSoC Check
+        ↓
+Qualified
+```
 
-### 11.2 Nightly流水线
+之后 merge 到：
 
-- 全VIP多工具编译；
-- 标准Regression；
-- 随机种子扩展；
-- Coverage Merge；
-- Mutation Test抽样；
-- 性能与仿真开销趋势；
-- Flaky Test检测；
-- Catalog质量状态更新。
-
-### 11.3 Release流水线
-
-- 只允许从受保护Release分支或tag触发；
-- SemVer和CHANGELOG检查；
-- 依赖锁定；
-- 全量Qualification；
-- 生成Release Manifest、SBOM、Quality Report、RTM和文档；
-- 生成签名或hash；
-- 发布到GitHub Release；
-- Catalog Builder更新统一Catalog；
-- AIXSILICON展示版本、成熟度、兼容矩阵和验证证据。
+```text
+aixsilicon-vip-repo
+```
 
 ---
 
-## 12. YAML元数据建议
+### Deprecated
+
+仍然保留，以保证已有项目能够复现。
+
+---
+
+# 7. FuseSoC 应成为 VIP 的标准调用接口
+
+这点我建议明确写进规范：
+
+> **任何正式 VIP 必须提供 FuseSoC Core 描述。**
+
+例如：
 
 ```yaml
-schema_version: 1.0
+CAPI=2:
 
-vip:
-  id: VIP-AXI-001
-  name: axi
-  vlnv: aix:vip:axi:1.0.0
-  lifecycle: beta
-  owner: dv-platform
-  license: Apache-2.0
+name: aixsilicon:vip:axi4:1.0.0
 
-protocol:
-  family: AMBA
-  name: AXI4
-  revision: declared-controlled-version
-  modes: [active_master, active_slave, passive]
+description: AIXSILICON AXI4 Verification IP
 
-capabilities:
-  outstanding: true
-  out_of_order: true
-  narrow_transfer: true
-  unaligned_transfer: true
-  read_interleave: true
-  exclusive_access: planned
+filesets:
 
-dependencies:
-  - aix:vip:common:^1.0
-  - aix:interface:axi:^1.0
+  vip:
+    files:
+      - src/axi4_pkg.sv
+      - src/transaction/axi4_item.sv
+      - src/agent/axi4_driver.sv
+      - src/agent/axi4_monitor.sv
+      - src/agent/axi4_agent.sv
+    file_type: systemVerilogSource
 
-tools:
-  vcs: qualified
-  xcelium: qualified
-  questa: beta
-  verilator: unsupported
+targets:
 
-quality:
-  gate: V2_BETA
-  requirement_coverage: 100
-  negative_test_pass_rate: 100
+  default:
+    filesets:
+      - vip
 
-provenance:
-  derived_from: []
-  sbom: metadata/sbom.spdx.json
+  smoke:
+    filesets:
+      - vip
+      - tb
 ```
 
-协议规范版本不能写成模糊的“latest”，必须在受控环境中记录实际使用的规范标识。对于无法随仓库分发的标准正文，只记录引用和内部受控位置。
+FuseSoC CAPI2 对 filesets、targets、parameters 等都有原生支持，因此非常适合把 VIP 从“源码目录”变成“可声明依赖的验证组件”。([GitHub][2])
+
+调用最终可以变成：
+
+```text
+aixsilicon:vip:axi4:1.0.0
+```
+
+而不是：
+
+```text
+../../../../../common/vip/axi/src/...
+```
+
+这对你后续整个 IP Development Suite / SoC Verification Suite 非常关键。
 
 ---
 
-## 13. 实现路线图
+# 8. 建议统一 VLNV
 
-以下按5人核心团队估算：1名架构/负责人、2名VIP工程师、1名DV Flow/CI工程师、1名验证与Qualification工程师；形式验证、法务/开源合规和协议专家兼职支持。
+AIXSILICON 自己的东西统一：
 
-### 阶段0：立项和技术选型，2周
+```text
+aixsilicon:vip:<name>:<version>
+```
 
-交付：
+例如：
 
-- VIP Charter和仓库边界；
-- UVM版本与仿真器基线；
-- VIP Metadata/Testplan/Release Manifest Schema；
-- 开源候选清单与License Review模板；
-- APB、AXI开源PoC方案；
-- P0需求基线和TODO Board。
+```text
+aixsilicon:vip:axi4:1.0.0
+aixsilicon:vip:apb4:1.2.0
+aixsilicon:vip:uart:2.0.0
+aixsilicon:vip:sram:1.0.0
+```
 
-出口：所有Owner明确，架构评审通过，选定首个PoC。
+未来其它 Repo 可以自然形成：
 
-### 阶段1：公共底座，4周
+```text
+aixsilicon:ip:ram_ctrl:1.0.0
 
-交付：
+aixsilicon:cbb:fifo:2.1.0
 
-- 仓库骨架；
-- `aix:vip:common`；
-- FuseSoC target模板；
-- Clock/Reset、Ready/Valid基础组件；
-- CI最小闭环；
-- 文档、Testplan、Coverage模板；
-- Catalog导出器初版。
+aixsilicon:vip:axi4:1.1.0
 
-出口：新建VIP可以由模板在1天内生成骨架并跑通smoke。
+aixsilicon:hwif:axi4:1.0.0
+```
 
-### 阶段2：APB与系统基础VIP，6周
-
-并行建设：
-
-- APB VIP；
-- Generic Memory VIP；
-- Interrupt VIP；
-- CSR/RAL adapter；
-- OpenTitan/TVIP/PULP候选审计与对拍。
-
-出口：APB达到V3 Qualified，其余达到V2 Beta；至少接入一个真实IP。
-
-### 阶段3：AXI4-Lite与AXI-Stream，8周
-
-交付：
-
-- AXI4-Lite VIP；
-- AXI-Stream VIP；
-- SVA/Protocol Checker；
-- cocotbext/PULP交叉验证；
-- reset/backpressure/error/mutation测试；
-- 多仿真器兼容。
-
-出口：AXI4-Lite达到V3，AXI-Stream达到V2；在总线桥、CSR IP或数据通路CBB中落地。
-
-### 阶段4：完整AXI4，10~12周
-
-交付：
-
-- Burst、ID、Outstanding、乱序、窄传输、非对齐、4KB边界；
-- 高并发Master和可编程Slave responder；
-- Memory model与scoreboard adapter；
-- 性能监测；
-- 协议覆盖与大量负向测试；
-- 与TVIP-AXI、PULP AXI及可用商业VIP交叉验证。
-
-出口：AXI4达到V2 Beta；V3 Qualification可在后续项目中持续完成。完整AXI不应因赶节点而提前标为Qualified。
-
-### 阶段5：外设与SoC服务VIP，8~12周
-
-按项目需求排序建设UART、SPI/QSPI、I2C、JTAG/DMI、Boot Host、Power State；复用OpenTitan Agent架构，但去除TL-UL和CIP耦合。
-
-出口：至少三类外设VIP达到V2，至少一个Subsystem/SoC环境完成复用。
-
-### 阶段6：功能安全与规模化运营，持续
-
-交付：
-
-- Bus/Interrupt/ECC/Clock/Reset故障注入；
-- Fault Campaign Schema与自动执行；
-- PIC、总线安全、CRG、存储安全机制接入；
-- 质量Dashboard；
-- UVM Verification Skill自动选型、装配与Gate；
-- 项目反馈—缺陷—回归—版本闭环。
+整个资产生态就统一了。
 
 ---
 
-## 14. 人力与周期建议
+# 9. 一个关键点：VIP 不要全部强制 UVM
 
-| 模式 | 配置 | 预期结果 |
-|---|---|---|
-| 最小团队 | 3人，6个月 | Common、APB、AXI4-Lite、Clock/Reset、Memory、Interrupt达到可用；完整AXI难以Qualified |
-| 推荐团队 | 5人，9~12个月 | P0/P1主干完成，完整AXI Beta/Qualified，若干外设VIP落地 |
-| 平台团队 | 7~9人，12个月 | 增加Formal、功能安全、外设并行、多工具Qualification和项目支持 |
+这一点我会特别强调。
 
-人员能力要求：
+VIP REPO 管的是**Verification IP**，而不是：
 
-- 至少2人熟悉完整SystemVerilog/UVM；
-- 至少1人熟悉AXI协议边界和SoC互联；
-- 至少1人负责CI、FuseSoC、回归和结果Schema；
-- 至少1人独立负责Checker、Coverage和Qualification，避免实现者自证；
-- 形式验证能力可以兼职，但协议SVA不能长期无人负责。
+> UVM Class Library。
 
----
+所以可以允许：
 
-## 15. 与Skill Suite及AIXSILICON的结合
+```text
+VIP
+├── Interface
+├── BFM
+├── Monitor
+├── Checker
+├── Assertion
+├── Coverage
+└── UVM Adapter
+```
 
-UVM Verification Skill Suite不应默认生成新的Agent，而应按以下流程工作：
+比如 SRAM VIP / Clock Reset VIP / Interrupt VIP，有时候：
 
-1. 从IP/SoC接口Metadata识别协议和版本；
-2. 查询Catalog，选择兼容且成熟度足够的VIP VLNV；
-3. 生成FuseSoC依赖和环境装配代码；
-4. 生成IP专用Config、Virtual Sequence、Reference Model adapter和Scoreboard；
-5. 将Requirement ID映射到VIP sequence、project testcase和coverage；
-6. 运行compile/smoke/regression Gate；
-7. 将日志、coverage、seed、工具版本和hash写入Evidence；
-8. 在AIXSILICON项目座舱展示VIP版本、质量等级和复用关系。
+```text
+BFM + Monitor + Checker + SVA
+```
 
-Skill负责专业决策、装配和异常路径，脚本负责Schema校验、构建、运行、报告和发布等确定性任务。
+已经非常好用。
 
----
+如果所有东西都强行：
 
-## 16. 主要风险与控制
+```text
+uvm_agent
+uvm_driver
+uvm_monitor
+uvm_sequence
+...
+```
 
-| 风险 | 控制措施 |
-|---|---|
-| 开源代码看似完整但协议覆盖不足 | RTM、负向测试、mutation test、独立对拍 |
-| Driver与Monitor共享同一Bug | 独立实现关键解析逻辑，使用第三方模型交叉检查 |
-| AXI范围无限膨胀 | 明确首版支持矩阵，按SemVer增加功能 |
-| 第三方许可证污染 | SBOM、逐文件审计、受控vendor流程、法务确认 |
-| 与OpenTitan/PULP强耦合 | 只吸收架构与局部组件，统一适配到本地Interface/DV Common |
-| 仿真器兼容性差 | PR双工具编译、Nightly多工具回归、禁止无条件私有语法 |
-| VIP变成项目代码垃圾场 | 项目Env/Test留在项目仓，公共VIP必须通过复用准入评审 |
-| 只追求代码生成数量 | Gate按检测能力、协议覆盖、项目复用和缺陷发现统计 |
-| 商业VIP与自研VIP接口割裂 | 建立统一adapter、transaction abstraction和结果Schema |
+反而会把简单 VIP 搞得很重。
 
----
+因此推荐 VIP Development Suite 支持：
 
-## 17. 首批TODO List
+```text
+VIP Profile
 
-### P0：立即启动
+FULL_UVM
+LIGHTWEIGHT
+PASSIVE
+CHECKER_ONLY
+MODEL
+```
 
-- [ ] 建立`vip-repo`和CODEOWNERS；
-- [ ] 冻结VIP/dv-common/hw-interfaces边界；
-- [ ] 确认UVM基线：UVM 1.2与IEEE 1800.2兼容策略；
-- [ ] 定义VIP Metadata、Testplan、Coverage和Release Manifest Schema；
-- [ ] 定义统一Agent Config、analysis port和error event API；
-- [ ] 创建FuseSoC Core模板和标准targets；
-- [ ] 对TVIP-APB、OpenTitan、PULP common_verification完成许可证及架构审计；
-- [ ] 完成APB“自研骨架 vs TVIP-APB适配”双PoC；
-- [ ] 建立Clock/Reset和Ready/Valid组件；
-- [ ] 建立最小CI：Schema→Compile→Smoke→Negative→Report；
-- [ ] 选择第一个真实IP作为穿刺项目。
-
-### P1：首个季度
-
-- [ ] APB达到V3 Qualified；
-- [ ] Clock/Reset、Memory、Interrupt达到V2以上；
-- [ ] AXI4-Lite和AXI-Stream完成Beta；
-- [ ] 接入至少两种仿真器；
-- [ ] 建立cocotbext/PULP交叉验证；
-- [ ] 接入UVM Verification Skill Suite；
-- [ ] Catalog显示VIP能力和兼容矩阵。
-
-### P2：两个季度
-
-- [ ] 完整AXI4达到V2/V3；
-- [ ] UART、SPI、I2C至少三项达到V2；
-- [ ] 完成功能安全故障注入基础框架；
-- [ ] 至少两个IP和一个Subsystem复用；
-- [ ] 建立Mutation Test和质量趋势Dashboard；
-- [ ] 形成首个Proven级VIP版本。
+这是很有价值的分类。
 
 ---
 
-## 18. 第一批验收场景
+# 10. VIP REPO 和其他 Repo 的关系
 
-建议选择三个真实穿刺对象：
+我建议最终形成：
 
-1. **APB寄存器型IP**：验证APB、RAL、Interrupt、Clock/Reset完整闭环；
-2. **AXI/AXI-Lite桥或X2X类IP**：验证Outstanding、位宽、异步、backpressure、error response和reset；
-3. **PIC或功能安全中断模块**：验证Interrupt VIP、故障注入、Safety Mechanism Checker和Fault Campaign。
+```text
+                    AIXSILICON
+                         │
+               FuseSoC / Metadata
+                         │
+       ┌─────────────────┼─────────────────┐
+       │                 │                 │
+    IP REPO           CBB REPO          VIP REPO
+       │                 │                 │
+   Design IP         RTL Building       Verification
+                         Block             Asset
+       │                 │                 │
+       └─────────────────┼─────────────────┘
+                         │
+                      HWIF REPO
+                         │
+                 Interface Contract
+```
 
-三类场景分别代表外设IP、数据/总线路径和SoC功能安全集成，可以较完整地检验VIP Repo是否真正具备通用性。
+尤其这里：
+
+### HWIF REPO
+
+定义：
+
+```text
+AXI
+APB
+UART
+Interrupt
+Clock Reset
+...
+```
+
+的**接口契约**。
+
+### VIP REPO
+
+针对 HWIF 提供：
+
+```text
+Stimulus
+Monitor
+Checker
+Coverage
+Assertion
+```
+
+所以：
+
+```text
+HWIF
+ ↓
+VIP
+```
+
+最好存在明确对应关系。
+
+比如：
+
+```text
+aixsilicon:hwif:axi4
+        ↕
+aixsilicon:vip:axi4
+```
+
+这会让你的 Repo 体系非常漂亮。
 
 ---
 
-## 19. 最终出口定义
+# 11. 我建议第一批 Plan VIP List
 
-VIP Repo一期完成不能只以“提交多少个Agent”衡量，应满足：
+不要一开始贪多。
 
-- P0 VIP具有稳定VLNV和FuseSoC依赖；
-- APB、AXI4-Lite等至少一个主干VIP达到Qualified；
-- 至少两个真实项目成功复用；
-- 开源来源、许可证、修改和SBOM可追踪；
-- Requirement/Test/Coverage/Evidence闭环；
-- Checker能通过负向和mutation测试证明检测能力；
-- 多仿真器兼容；
-- Catalog可以查询能力、版本、质量和兼容关系；
-- UVM Verification Skill Suite能够自动发现并装配VIP；
-- 项目不再重复生成APB/AXI/UART等基础Agent。
+### P0｜SoC / IP 开发最常用
 
-届时VIP Repo将从“验证代码仓”升级为IP设计与SoC集成的公共验证产品线。
+```text
+AXI4
+AXI4-Lite
+APB4
+AHB-Lite
+
+Clock / Reset
+Interrupt
+SRAM
+
+UART
+SPI
+I2C
+GPIO
+```
+
+### P1
+
+```text
+ACE / ACE-Lite
+CHI
+
+DMA Traffic Model
+Flash
+eFuse
+Timer
+Watchdog
+
+JTAG
+SWD
+```
+
+### P2
+
+再开始做复杂协议：
+
+```text
+PCIe
+DDR
+USB
+Ethernet
+MIPI
+...
+```
+
+复杂标准协议甚至不一定值得自行开发完整 commercial-grade VIP，后面可以根据项目需要决定自研范围。
 
 ---
 
-## 20. 跨仓一致性修订（2026-08-13）
+# 12. VIP Development Suite 与 VIP REPO 的边界
 
-> 依据 [`plans/cross-repo-architecture-review.md`](../../plans/cross-repo-architecture-review.md)（ADR-0003/0005/0006）。
+最后我建议把整个流程固定下来：
 
-- 修正幽灵仓引用：`eda-flow`/`eda-rules` → workflow（DAG/Gate）+ tool（Result adapter）、workflow `policies/`；`hw-models` → techlib/model；
-- 与 dv-common 划界（R6）：VIP `common/` 只保留协议/事务相关公共；log/scoreboard/clk_rst/result 等协议无关机制归 dv-common；
-- 协议 SVA/Checker/Coverage 归本仓；接口契约归 hwif；桥/同步器/位宽转换实现归 cbb；
-- vendored `reference/`（OpenTitan/PULP 等）为只读对拍，不发布、不进入 fusesoc 正式发现与 Catalog（A2）；
-- VLNV 统一 `aixsilicon:vip:*`（ADR-0003，存量 `aix:vip:*` 走迁移窗口）。
+```text
+            vip_plan.md
+                  │
+                  ▼
+        VIP Development Suite
+                  │
+         ┌────────┴────────┐
+         │                 │
+      Develop           Self Test
+         │                 │
+         └────────┬────────┘
+                  ▼
+            Qualification
+                  │
+       ┌──────────┼──────────┐
+       │          │          │
+     Code       Docs       Quality
+       │          │          │
+       └──────────┼──────────┘
+                  ▼
+             VIP RELEASE
+                  │
+                  ▼
+       ┌────────────────────┐
+       │ AIXSILICON VIP REPO│
+       └────────────────────┘
+                  │
+          FuseSoC Library
+                  │
+      ┌───────────┼───────────┐
+      ▼           ▼           ▼
+ IP Development  SoC DV    CBB Development
+    Suite         Suite         Suite
+```
+
+其中 **VIP REPO 本身不要承担“如何开发 VIP”**。
+
+这些规则应该在：
+
+```text
+vip-development-suite/
+```
+
+里面。
+
+VIP REPO 只负责：
+
+> **Plan → Accept → Qualify → Catalog → Version → Distribute**
+
+---
+
+我认为最值得坚持的三条设计原则是：
+
+> **① VIP REPO 只收 Qualified VIP，不做开发垃圾场。**
+> **② Markdown 管规划和质量说明，FuseSoC `.core` 管机器调用。**
+> **③ VIP 不等于 UVM；Checker / Monitor / Coverage / Assertion 是 VIP 的一等公民。**
+
+这样未来 `IP REPO / CBB REPO / VIP REPO / HWIF REPO` 可以共享非常相似的资产治理框架，而 `VIP Development Suite` 负责把 VIP 按这个标准生产出来。
+
+[1]: https://fusesoc.readthedocs.io/_/downloads/en/stable/pdf/?utm_source=chatgpt.com "FuseSoC Documentation"
+[2]: https://github.com/olofk/fusesoc/blob/main/fusesoc/capi2/generator.py?utm_source=chatgpt.com "fusesoc/fusesoc/capi2/generator.py at main · olofk/fusesoc · GitHub"
+
+
+可以，而且我建议把这件事定义成 VIP 的“Qualification Evidence”，而不是简单的 regression pass。
+
+因为 VIP 的“正确性”和“完整性”其实是两个不同问题：
+
+* **正确性**：VIP 的行为、检查、采样、协议解释是对的。
+* **完整性**：协议规定的重要场景、边界、异常、组合空间都被覆盖到了。
+
+要充分证明，最好不是靠单一测试，而是靠一组相互独立的证据链。
+
+我建议给每个正式 VIP 强制要求下面 6 类证据：
+
+1. **Spec Traceability**
+   把协议规范条款映射到 VIP 能力。
+   例如 AXI4：
+   `SPEC-AXI-001 -> AW handshake checker -> TC-023/TC-024 -> COVERPOINT CP_AW`
+   最终形成：
+   `Protocol Requirement -> Implementation -> Test -> Coverage`
+   这一步最关键，因为它证明“不是凭感觉说完整”。
+
+2. **Self-Verification**
+   VIP 必须有独立的 self-test bench。
+   不要拿 DUT 顺便测 VIP，而要专门“故意制造合法/非法行为”来验证 VIP。
+   比如：
+
+   * 合法 transaction 必须不报错
+   * 非法 burst 必须准确报错
+   * 错误 response 必须捕获
+   * backpressure / outstanding / reorder 都要验证
+     最好支持 fault injection。
+
+3. **Golden Model / Cross Check**
+   对 transaction-level 行为，尽可能用独立 reference model 做比对。
+   比如：
+
+   ```text
+   Stimulus
+      ├─ VIP Driver -> DUT/Protocol Model
+      └─ Reference Model
+                 ↓
+              Compare
+   ```
+
+   重点是 reference model 最好不要复用 VIP 内部实现代码，否则会形成“同源错误”。
+
+4. **Checker Mutation Test**
+   这是非常有效的一招。
+   主动向协议行为注入错误：
+
+   ```text
+   handshake violation
+   illegal burst
+   invalid response
+   ordering error
+   timeout
+   ID mismatch
+   alignment error
+   ```
+
+   然后统计：
+
+   > VIP 应该抓出的错误，实际抓出了多少。
+
+   可以定义：
+   `Checker Detection Rate = Detected Faults / Injected Faults`
+
+   对一个优秀 VIP，我甚至建议这项成为发布门禁。
+
+5. **Coverage Closure**
+   不仅看 code coverage，而是至少看三层：
+
+   * Protocol Requirement Coverage
+   * Functional Coverage
+   * Checker / Assertion Coverage
+
+   比如 AXI：
+   `burst_type × burst_len × size × outstanding × response × backpressure`
+
+   还要特别关注：
+
+   * 边界值
+   * 最大/最小配置
+   * 非法输入
+   * 并发
+   * reset 中断
+   * timeout
+   * ordering
+   * 随机组合
+
+6. **Independent Qualification**
+   最好让 VIP 的开发者和 VIP 的 qualification 用不同的 test set。
+   即：
+
+   ```text
+   VIP Developer
+        ↓
+   Development Tests
+
+   Qualification
+        ↓
+   Independent Qualification Tests
+   ```
+
+   这样可信度会高很多。
+
+我建议你直接给 VIP REPO 定义一个统一的 `qualification/`：
+
+```text
+vip/amba/axi4/
+├── src/
+├── tests/
+├── docs/
+└── qualification/
+    ├── requirement_traceability.md
+    ├── qualification_plan.md
+    ├── qualification_report.md
+    ├── fault_injection.md
+    ├── coverage_report.md
+    ├── known_limitations.md
+    └── evidence/
+```
+
+其中 `requirement_traceability.md` 可以成为整个体系的核心，例如：
+
+| Requirement | Capability   | Checker      | Test         | Coverage | Result |
+| ----------- | ------------ | ------------ | ------------ | -------- | ------ |
+| AXI-R001    | AW handshake | SVA-AW-01    | TC-AW-001    | CP-AW    | PASS   |
+| AXI-R002    | Burst length | CHK-BURST-01 | TC-BURST-003 | CP-LEN   | PASS   |
+| AXI-R003    | 4KB boundary | CHK-4KB-01   | TC-BURST-010 | CP-4KB   | PASS   |
+
+这样你最终不是说：
+
+> “我们跑了 5000 个 test，所以 VIP 是对的。”
+
+而是说：
+
+> “协议规范中的 100% 强制条款都被结构化建模，每一条都有实现、检查、测试和覆盖证据；同时通过 mutation/fault injection 证明 checker 能捕获预期错误。”
+
+这个说服力完全不是一个量级。
+
+我甚至建议最终给 VIP 定义一个 Qualification Score，例如：
+
+```text
+Requirement Traceability     100%
+Mandatory Feature Coverage   100%
+Functional Coverage          >= 95%
+Checker Mutation Detection   100% mandatory / >=95% overall
+Assertion Coverage           >= 95%
+Regression Pass              100%
+Known Critical Issues        0
+```
+
+但这里有一个重要认识：
+
+**数字越高不一定越可信，traceability 比单纯 coverage 百分比更重要。**
+
+所以我会把一个“优秀 VIP”的可信证据总结成一个闭环：
+
+```text
+SPEC
+ ↓
+Requirement Model
+ ↓
+VIP Capability
+ ↓
+Checker / Driver / Monitor
+ ↓
+Qualification Test
+ ↓
+Fault Injection
+ ↓
+Coverage
+ ↓
+Qualification Report
+```
+
+如果你后面要把这个真正纳入 `VIP Development Suite`，我建议再增加一个专门的 `vip-qualification` 阶段，最终只有生成完整 Qualification Evidence 的 VIP 才允许进入 VIP REPO 的 `Qualified` 状态。
+
+
+可以。我建议先做一版“常用芯片研发 VIP 规划清单”，按优先级和复用价值组织，方便后续直接纳入 `vip_plan.md`。
+
+### 推荐 VIP LIST
+
+| 分类                              | VIP                        | 建议优先级 | 典型能力                                           |
+| ------------------------------- | -------------------------- | ----: | ---------------------------------------------- |
+| **AMBA / On-Chip Bus**          | AXI4 VIP                   |    P0 | Master / Slave / Monitor / Checker / Coverage  |
+|                                 | AXI4-Lite VIP              |    P0 | Master / Slave / Monitor / Checker             |
+|                                 | APB4 VIP                   |    P0 | Master / Slave / Monitor / Checker             |
+|                                 | AHB-Lite VIP               |    P0 | Master / Slave / Monitor / Checker             |
+|                                 | AXI-Stream VIP             |    P0 | Source / Sink / Monitor / Packet Check         |
+|                                 | ACE-Lite VIP               |    P1 | Coherency-lite transaction verification        |
+|                                 | ACE VIP                    |    P2 | Cache coherency verification                   |
+|                                 | CHI VIP                    |    P2 | Coherent hub interface verification            |
+| **Memory**                      | SRAM VIP                   |    P0 | Read / Write / Latency / ECC injection         |
+|                                 | ROM VIP                    |    P1 | Read model / initialization                    |
+|                                 | Generic Memory Model       |    P0 | Configurable latency / width / error injection |
+|                                 | DDR Controller-side VIP    |    P1 | Command / data / timing model                  |
+|                                 | Flash VIP                  |    P1 | Read / Program / Erase model                   |
+|                                 | eFuse / OTP VIP            |    P1 | Program / read / lock / lifecycle behavior     |
+| **Peripheral**                  | UART VIP                   |    P0 | TX / RX / baud / parity / framing error        |
+|                                 | SPI VIP                    |    P0 | Master / Slave / CPOL / CPHA / multi-CS        |
+|                                 | I2C VIP                    |    P0 | Master / Slave / arbitration / ACK-NACK        |
+|                                 | GPIO VIP                   |    P0 | Input / Output / Interrupt stimulus            |
+|                                 | Timer VIP                  |    P0 | Counter / compare / interrupt                  |
+|                                 | Watchdog VIP               |    P0 | Timeout / reset / interrupt                    |
+|                                 | PWM VIP                    |    P1 | Duty / period / edge checking                  |
+|                                 | RTC VIP                    |    P1 | Counter / alarm / calendar behavior            |
+| **Interrupt / Control**         | Generic Interrupt VIP      |    P0 | IRQ generation / priority / masking            |
+|                                 | PLIC VIP                   |    P1 | RISC-V interrupt controller verification       |
+|                                 | GIC VIP                    |    P1 | ARM interrupt subsystem verification           |
+|                                 | Mailbox VIP                |    P1 | Core-to-core message verification              |
+| **Clock / Reset / Power**       | Clock VIP                  |    P0 | Clock generation / jitter / frequency change   |
+|                                 | Reset VIP                  |    P0 | POR / warm reset / reset sequencing            |
+|                                 | Clock Reset VIP            |    P0 | CRG combined stimulus/check                    |
+|                                 | Power Control VIP          |    P1 | Power state / isolation / retention            |
+|                                 | DVFS VIP                   |    P1 | Voltage-frequency state transition modeling    |
+| **DMA / Data Movement**         | DMA Traffic VIP            |    P0 | Configurable traffic generation                |
+|                                 | Memory Traffic Generator   |    P0 | Burst / bandwidth / latency / congestion       |
+|                                 | Descriptor Model VIP       |    P1 | Descriptor chain / ring behavior               |
+| **Debug**                       | JTAG VIP                   |    P1 | TAP state / IR / DR / boundary scan            |
+|                                 | SWD VIP                    |    P1 | ARM serial debug                               |
+|                                 | RISC-V Debug VIP           |    P1 | DMI / debug module interaction                 |
+| **Networking / IO**             | Ethernet MAC VIP           |    P1 | Frame generate / monitor / CRC                 |
+|                                 | MDIO VIP                   |    P1 | PHY management                                 |
+|                                 | PCIe VIP                   |    P2 | TLP / DLLP / link behavior                     |
+|                                 | USB VIP                    |    P2 | Endpoint / transfer / protocol checking        |
+|                                 | MIPI CSI/DSI VIP           |    P2 | Packet / lane behavior                         |
+| **Storage**                     | SD / SDIO VIP              |    P1 | Command / data / card model                    |
+|                                 | eMMC VIP                   |    P1 | Command / boot / data transfer                 |
+|                                 | UFS VIP                    |    P2 | High-speed storage protocol                    |
+| **Safety / Reliability**        | ECC Injection VIP          |    P0 | SEC/DED fault injection                        |
+|                                 | Parity Error Injection VIP |    P0 | Register / memory parity injection             |
+|                                 | Fault Injection VIP        |    P0 | Generic protocol / datapath fault injection    |
+|                                 | Lockstep Comparison VIP    |    P1 | Dual-core / dual-path mismatch injection       |
+| **Verification Infrastructure** | Generic Register VIP       |    P0 | Read/write/access-type checking                |
+|                                 | CSR / RAL Access VIP       |    P0 | Register access stimulus                       |
+|                                 | Stream VIP                 |    P0 | Generic valid-ready stream                     |
+|                                 | Packet VIP                 |    P0 | Generic packet source/sink                     |
+|                                 | Scoreboard Model VIP       |    P1 | Generic transaction compare                    |
+|                                 | Performance Monitor VIP    |    P1 | Latency / bandwidth / outstanding statistics   |
+
+我建议第一阶段不要铺太大，先收敛成 **P0 核心库**，大约 20 个左右：
+
+```text
+AXI4
+AXI4-Lite
+AXI-Stream
+APB4
+AHB-Lite
+
+SRAM
+Generic Memory
+
+UART
+SPI
+I2C
+GPIO
+Timer
+Watchdog
+
+Interrupt
+Clock
+Reset
+Clock-Reset
+
+DMA Traffic
+Memory Traffic Generator
+
+Register / CSR
+Generic Stream
+
+ECC Injection
+Parity Injection
+Fault Injection
+```
+
+这批 VIP 的特点是：**协议简单或中等复杂、复用率极高、非常适合自研、几乎所有 IP / SoC 项目都会用到。**
+
+反而像 `PCIe / DDR / USB / CHI / MIPI` 这种，我建议放到 P2，不要一开始就投入，因为要做到真正可信的完整 VIP，开发和 qualification 成本会高很多。
+
+如果你希望直接进入 REPO，我还建议 `vip_plan.md` 用下面这些字段：
+
+| ID      | VIP           | Category       | Priority | Profile       | Status  | HWIF  | Version | Owner | Qualification |
+| ------- | ------------- | -------------- | -------- | ------------- | ------- | ----- | ------- | ----- | ------------- |
+| VIP-001 | AXI4          | AMBA           | P0       | FULL_UVM      | Planned | axi4  | -       | -     | -             |
+| VIP-002 | APB4          | AMBA           | P0       | FULL_UVM      | Planned | apb4  | -       | -     | -             |
+| VIP-003 | SRAM          | Memory         | P0       | LIGHTWEIGHT   | Planned | sram  | -       | -     | -             |
+| VIP-004 | Clock         | Infrastructure | P0       | LIGHTWEIGHT   | Planned | clock | -       | -     | -             |
+| VIP-005 | ECC Injection | Safety         | P0       | CHECKER/MODEL | Planned | -     | -       | -     | -             |
+
+其中 `Profile` 建议固定为：
+
+`FULL_UVM / LIGHTWEIGHT / PASSIVE / CHECKER_ONLY / MODEL`
+
+这样这个 VIP List 不只是“愿望清单”，而会直接成为 **VIP Development Suite 的开发 Backlog + VIP REPO 的产品路线图**。
+
+
+
 

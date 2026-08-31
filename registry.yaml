@@ -1,0 +1,743 @@
+# AIXSILICON VIP Repository — registry.yaml
+# 本文件是 VIP 状态唯一 SSOT（由 tools/gen_catalog.py 治理与对账）。
+# 字段: id/name/family/group/profile/priority/hwif/description/status/version/path/quality
+# quality.maturity: M0 Draft / M1 Experimental / M2 Alpha / M3 Beta / M4 Qualified / M5 Released
+# quality.qualification: NOT_RUN / PASS / FAIL / BLOCKED / WAIVED / -
+# 修改入口: 直接编辑本文件后运行 'uv run python tools/gen_catalog.py --root .' 校验，
+#           并同步刷新 README.md 状态总览与 vip_catalog.md。
+# status=qualified 表示物理目录存在且通过验证；planned 条目无物理目录。
+# 生命周期: planned -> developing -> qualified -> deprecated
+schema_version: '1.0'
+updated: '2026-08-31T00:00:00Z'
+vendor: aixsilicon
+library: vip
+vips:
+- id: VIP-001
+  name: axi4
+  family: AXI4
+  group: vip/amba
+  profile: FULL_UVM
+  priority: P0
+  hwif: axi4
+  description: Master/Slave/Monitor/Checker/Coverage、outstanding、out-of-order、4KB
+    boundary
+  status: planned
+  version: '-'
+  path: vip/amba/axi4
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-002
+  name: axi4_lite
+  family: AXI4-Lite
+  group: vip/amba
+  profile: FULL_UVM
+  priority: P0
+  hwif: axi4_lite
+  description: Master/Slave/Monitor/Checker
+  status: planned
+  version: '-'
+  path: vip/amba/axi4_lite
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-003
+  name: axi_stream
+  family: AXI-Stream
+  group: vip/amba
+  profile: LIGHTWEIGHT
+  priority: P0
+  hwif: axi_stream
+  description: Source/Sink/Monitor/Packet Check、TKEEP/TLAST
+  status: planned
+  version: '-'
+  path: vip/amba/axi_stream
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-004
+  name: apb4
+  family: APB4
+  group: vip/amba
+  profile: FULL_UVM
+  priority: P0
+  hwif: apb4
+  description: Master/Slave/Monitor/Checker、wait state、slave error
+  status: planned
+  version: '-'
+  path: vip/amba/apb4
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-005
+  name: ahb_lite
+  family: AHB-Lite
+  group: vip/amba
+  profile: FULL_UVM
+  priority: P0
+  hwif: ahb_lite
+  description: Master/Slave/Monitor/Checker、burst、split
+  status: planned
+  version: '-'
+  path: vip/amba/ahb_lite
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-101
+  name: ace_lite
+  family: ACE-Lite
+  group: vip/amba
+  profile: FULL_UVM
+  priority: P1
+  hwif: ace_lite
+  description: Coherency-lite transaction verification
+  status: planned
+  version: '-'
+  path: vip/amba/ace_lite
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-201
+  name: ace
+  family: ACE
+  group: vip/amba
+  profile: FULL_UVM
+  priority: P2
+  hwif: ace
+  description: Cache coherency verification
+  status: planned
+  version: '-'
+  path: vip/amba/ace
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-202
+  name: chi
+  family: CHI
+  group: vip/amba
+  profile: FULL_UVM
+  priority: P2
+  hwif: chi
+  description: Coherent hub interface verification
+  status: planned
+  version: '-'
+  path: vip/amba/chi
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-006
+  name: sram
+  family: SRAM
+  group: vip/memory
+  profile: LIGHTWEIGHT
+  priority: P0
+  hwif: sram
+  description: Read/Write/Latency/ECC injection
+  status: planned
+  version: '-'
+  path: vip/memory/sram
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-007
+  name: generic_memory
+  family: Generic Memory Model
+  group: vip/memory
+  profile: LIGHTWEIGHT
+  priority: P0
+  hwif: memory
+  description: Configurable latency/width/error injection
+  status: planned
+  version: '-'
+  path: vip/memory/generic_memory
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-102
+  name: flash
+  family: Flash
+  group: vip/memory
+  profile: LIGHTWEIGHT
+  priority: P1
+  hwif: flash
+  description: Read/Program/Erase model
+  status: planned
+  version: '-'
+  path: vip/memory/flash
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-103
+  name: efuse_otp
+  family: eFuse/OTP
+  group: vip/memory
+  profile: LIGHTWEIGHT
+  priority: P1
+  hwif: efuse
+  description: Program/read/lock/lifecycle behavior
+  status: planned
+  version: '-'
+  path: vip/memory/efuse_otp
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-104
+  name: rom
+  family: ROM
+  group: vip/memory
+  profile: LIGHTWEIGHT
+  priority: P1
+  hwif: rom
+  description: Read model/initialization
+  status: planned
+  version: '-'
+  path: vip/memory/rom
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-105
+  name: ddr
+  family: DDR Controller-side
+  group: vip/memory
+  profile: MODEL
+  priority: P1
+  hwif: ddr
+  description: Command/data/timing model
+  status: planned
+  version: '-'
+  path: vip/memory/ddr
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-008
+  name: uart
+  family: UART
+  group: vip/peripheral
+  profile: FULL_UVM
+  priority: P0
+  hwif: uart
+  description: TX/RX/baud/parity/framing error
+  status: planned
+  version: '-'
+  path: vip/peripheral/uart
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-009
+  name: spi
+  family: SPI
+  group: vip/peripheral
+  profile: FULL_UVM
+  priority: P0
+  hwif: spi
+  description: Master/Slave/CPOL/CPHA/multi-CS
+  status: planned
+  version: '-'
+  path: vip/peripheral/spi
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-010
+  name: i2c
+  family: I2C
+  group: vip/peripheral
+  profile: FULL_UVM
+  priority: P0
+  hwif: i2c
+  description: Master/Slave/arbitration/ACK-NACK
+  status: planned
+  version: '-'
+  path: vip/peripheral/i2c
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-011
+  name: gpio
+  family: GPIO
+  group: vip/peripheral
+  profile: LIGHTWEIGHT
+  priority: P0
+  hwif: gpio
+  description: Input/Output/Interrupt stimulus
+  status: planned
+  version: '-'
+  path: vip/peripheral/gpio
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-012
+  name: timer
+  family: Timer
+  group: vip/peripheral
+  profile: LIGHTWEIGHT
+  priority: P0
+  hwif: timer
+  description: Counter/compare/interrupt
+  status: planned
+  version: '-'
+  path: vip/peripheral/timer
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-013
+  name: watchdog
+  family: Watchdog
+  group: vip/peripheral
+  profile: LIGHTWEIGHT
+  priority: P0
+  hwif: watchdog
+  description: Timeout/reset/interrupt
+  status: planned
+  version: '-'
+  path: vip/peripheral/watchdog
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-106
+  name: pwm
+  family: PWM
+  group: vip/peripheral
+  profile: LIGHTWEIGHT
+  priority: P1
+  hwif: pwm
+  description: Duty/period/edge checking
+  status: planned
+  version: '-'
+  path: vip/peripheral/pwm
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-107
+  name: rtc
+  family: RTC
+  group: vip/peripheral
+  profile: LIGHTWEIGHT
+  priority: P1
+  hwif: rtc
+  description: Counter/alarm/calendar behavior
+  status: planned
+  version: '-'
+  path: vip/peripheral/rtc
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-014
+  name: interrupt
+  family: Generic Interrupt
+  group: vip/chip
+  profile: LIGHTWEIGHT
+  priority: P0
+  hwif: interrupt
+  description: IRQ generation/priority/masking
+  status: planned
+  version: '-'
+  path: vip/chip/interrupt
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-015
+  name: clock
+  family: Clock
+  group: vip/chip
+  profile: LIGHTWEIGHT
+  priority: P0
+  hwif: clock
+  description: Clock generation/jitter/frequency change
+  status: planned
+  version: '-'
+  path: vip/chip/clock
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-016
+  name: reset
+  family: Reset
+  group: vip/chip
+  profile: LIGHTWEIGHT
+  priority: P0
+  hwif: reset
+  description: POR/warm reset/reset sequencing
+  status: planned
+  version: '-'
+  path: vip/chip/reset
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-017
+  name: clock_reset
+  family: Clock Reset
+  group: vip/chip
+  profile: LIGHTWEIGHT
+  priority: P0
+  hwif: clock_reset
+  description: CRG combined stimulus/check
+  status: planned
+  version: '-'
+  path: vip/chip/clock_reset
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-018
+  name: dma_traffic
+  family: DMA Traffic
+  group: vip/chip
+  profile: LIGHTWEIGHT
+  priority: P0
+  hwif: dma
+  description: Configurable traffic generation
+  status: planned
+  version: '-'
+  path: vip/chip/dma_traffic
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-108
+  name: plic
+  family: PLIC
+  group: vip/chip
+  profile: FULL_UVM
+  priority: P1
+  hwif: plic
+  description: RISC-V interrupt controller verification
+  status: planned
+  version: '-'
+  path: vip/chip/plic
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-109
+  name: gic
+  family: GIC
+  group: vip/chip
+  profile: FULL_UVM
+  priority: P1
+  hwif: gic
+  description: ARM interrupt subsystem verification
+  status: planned
+  version: '-'
+  path: vip/chip/gic
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-110
+  name: mailbox
+  family: Mailbox
+  group: vip/chip
+  profile: LIGHTWEIGHT
+  priority: P1
+  hwif: mailbox
+  description: Core-to-core message verification
+  status: planned
+  version: '-'
+  path: vip/chip/mailbox
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-111
+  name: power_control
+  family: Power Control
+  group: vip/chip
+  profile: MODEL
+  priority: P1
+  hwif: power
+  description: Power state/isolation/retention
+  status: planned
+  version: '-'
+  path: vip/chip/power_control
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-112
+  name: dvfs
+  family: DVFS
+  group: vip/chip
+  profile: MODEL
+  priority: P1
+  hwif: dvfs
+  description: Voltage-frequency state transition modeling
+  status: planned
+  version: '-'
+  path: vip/chip/dvfs
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-113
+  name: descriptor_model
+  family: Descriptor Model
+  group: vip/chip
+  profile: LIGHTWEIGHT
+  priority: P1
+  hwif: descriptor
+  description: Descriptor chain/ring behavior
+  status: planned
+  version: '-'
+  path: vip/chip/descriptor_model
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-114
+  name: jtag
+  family: JTAG
+  group: vip/debug
+  profile: FULL_UVM
+  priority: P1
+  hwif: jtag
+  description: TAP state/IR/DR/boundary scan
+  status: planned
+  version: '-'
+  path: vip/debug/jtag
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-115
+  name: swd
+  family: SWD
+  group: vip/debug
+  profile: FULL_UVM
+  priority: P1
+  hwif: swd
+  description: ARM serial debug
+  status: planned
+  version: '-'
+  path: vip/debug/swd
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-116
+  name: riscv_debug
+  family: RISC-V Debug
+  group: vip/debug
+  profile: FULL_UVM
+  priority: P1
+  hwif: riscv_debug
+  description: DMI/debug module interaction
+  status: planned
+  version: '-'
+  path: vip/debug/riscv_debug
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-117
+  name: ethernet_mac
+  family: Ethernet MAC
+  group: vip/io
+  profile: FULL_UVM
+  priority: P1
+  hwif: eth_mac
+  description: Frame generate/monitor/CRC
+  status: planned
+  version: '-'
+  path: vip/io/ethernet_mac
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-118
+  name: mdio
+  family: MDIO
+  group: vip/io
+  profile: LIGHTWEIGHT
+  priority: P1
+  hwif: mdio
+  description: PHY management
+  status: planned
+  version: '-'
+  path: vip/io/mdio
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-203
+  name: pcie
+  family: PCIe
+  group: vip/io
+  profile: FULL_UVM
+  priority: P2
+  hwif: pcie
+  description: TLP/DLLP/link behavior
+  status: planned
+  version: '-'
+  path: vip/io/pcie
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-204
+  name: usb
+  family: USB
+  group: vip/io
+  profile: FULL_UVM
+  priority: P2
+  hwif: usb
+  description: Endpoint/transfer/protocol checking
+  status: planned
+  version: '-'
+  path: vip/io/usb
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-205
+  name: mipi
+  family: MIPI CSI/DSI
+  group: vip/io
+  profile: FULL_UVM
+  priority: P2
+  hwif: mipi
+  description: Packet/lane behavior
+  status: planned
+  version: '-'
+  path: vip/io/mipi
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-119
+  name: sd
+  family: SD/SDIO
+  group: vip/storage
+  profile: FULL_UVM
+  priority: P1
+  hwif: sd
+  description: Command/data/card model
+  status: planned
+  version: '-'
+  path: vip/storage/sd
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-120
+  name: emmc
+  family: eMMC
+  group: vip/storage
+  profile: FULL_UVM
+  priority: P1
+  hwif: emmc
+  description: Command/boot/data transfer
+  status: planned
+  version: '-'
+  path: vip/storage/emmc
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-206
+  name: ufs
+  family: UFS
+  group: vip/storage
+  profile: FULL_UVM
+  priority: P2
+  hwif: ufs
+  description: High-speed storage protocol
+  status: planned
+  version: '-'
+  path: vip/storage/ufs
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-021
+  name: ecc_injection
+  family: ECC Injection
+  group: vip/safety
+  profile: CHECKER_ONLY
+  priority: P0
+  hwif: '-'
+  description: SEC/DED fault injection
+  status: planned
+  version: '-'
+  path: vip/safety/ecc_injection
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-022
+  name: parity_injection
+  family: Parity Error Injection
+  group: vip/safety
+  profile: CHECKER_ONLY
+  priority: P0
+  hwif: '-'
+  description: Register/memory parity injection
+  status: planned
+  version: '-'
+  path: vip/safety/parity_injection
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-023
+  name: fault_injection
+  family: Fault Injection
+  group: vip/safety
+  profile: CHECKER_ONLY
+  priority: P0
+  hwif: '-'
+  description: Generic protocol/datapath fault injection
+  status: planned
+  version: '-'
+  path: vip/safety/fault_injection
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-121
+  name: lockstep_comparison
+  family: Lockstep Comparison
+  group: vip/safety
+  profile: CHECKER_ONLY
+  priority: P1
+  hwif: '-'
+  description: Dual-core/dual-path mismatch injection
+  status: planned
+  version: '-'
+  path: vip/safety/lockstep_comparison
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-019
+  name: csr_access
+  family: Generic Register / CSR
+  group: vip/common
+  profile: FULL_UVM
+  priority: P0
+  hwif: csr
+  description: Read/write/access-type checking、CSR/RAL access
+  status: planned
+  version: '-'
+  path: vip/common/csr_access
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-020
+  name: generic_stream
+  family: Generic Stream
+  group: vip/common
+  profile: LIGHTWEIGHT
+  priority: P0
+  hwif: stream
+  description: Generic valid-ready stream、packet source/sink
+  status: planned
+  version: '-'
+  path: vip/common/generic_stream
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-122
+  name: scoreboard_model
+  family: Scoreboard Model
+  group: vip/common
+  profile: MODEL
+  priority: P1
+  hwif: '-'
+  description: Generic transaction compare
+  status: planned
+  version: '-'
+  path: vip/common/scoreboard_model
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
+- id: VIP-123
+  name: performance_monitor
+  family: Performance Monitor
+  group: vip/common
+  profile: PASSIVE
+  priority: P1
+  hwif: '-'
+  description: Latency/bandwidth/outstanding statistics
+  status: planned
+  version: '-'
+  path: vip/common/performance_monitor
+  quality:
+    maturity: M0
+    qualification: NOT_RUN
