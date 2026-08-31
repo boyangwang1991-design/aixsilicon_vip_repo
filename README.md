@@ -18,8 +18,7 @@ VIP REPO            = 经过验收的 VIP 产品货架（负责 Plan → Accept 
 
 ```text
 aixsilicon-vip-repo/
-├── README.md            # 本文件：仓库定位与使用说明
-├── vip_catalog.md       # VIP Catalog（由脚本生成的机器可读索引 Markdown 呈现）
+├── README.md            # 本文件：仓库定位与使用说明（含由脚本生成的状态总览）
 ├── registry.yaml        # VIP 状态索引（唯一 SSOT：id/name/family/group/profile/priority/hwif/status/version/path）
 ├── fusesoc.conf         # FuseSoC 库注册
 ├── CHANGELOG.md         # 平台版本
@@ -35,7 +34,7 @@ aixsilicon-vip-repo/
 │   ├── safety/          # 功能安全/故障注入 VIP（ecc_injection / fault_injection ...）
 │   └── common/          # 通用验证基础设施 VIP（csr_access / generic_stream ...）
 └── tools/               # 仓库级确定性脚本
-    ├── gen_catalog.py   # 从 registry.yaml 生成 README 状态总览与 vip_catalog.md
+    ├── gen_catalog.py   # 从 registry.yaml 生成 README 状态总览
     ├── check_vip.py     # VIP 准入结构/元数据检查（G1/G2）
     └── regression.py    # VIP 回归入口（G7）
 ```
@@ -94,7 +93,7 @@ Deprecated（保留以保证已有项目可复现）
 
 > 以下状态总览由 [`tools/gen_catalog.py`](tools/gen_catalog.py) 依据
 > [`registry.yaml`](registry.yaml:1)（SSOT）自动生成；**修改 `registry.yaml` 后必须运行**
-> `uv run python tools/gen_catalog.py --root .` 刷新本节与 `vip_catalog.md`，勿手工编辑。
+> `uv run python tools/gen_catalog.py --root .` 刷新本节，勿手工编辑。
 
 <!-- REGISTRY-STATUS:BEGIN -->
 > 本节由 `tools/gen_catalog.py` 依据 `registry.yaml`（SSOT）自动生成。

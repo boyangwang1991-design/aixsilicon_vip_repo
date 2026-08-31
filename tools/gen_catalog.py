@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-gen_catalog.py — 将 registry.yaml（SSOT）中的 VIP 状态可视化刷新到 README.md 与 vip_catalog.md
+gen_catalog.py — 将 registry.yaml（SSOT）中的 VIP 状态可视化刷新到 README.md
 
 职责：
 1. 加载并校验 registry.yaml（id 唯一 / 必填字段 / status / profile / priority / path-group 一致性）；
-2. 生成「状态总览」 Markdown 区块（已准入 VIP 表 + 类别/Profile/优先级统计）；
+2. 生成「状态总览」 Markdown 区块（已准入 VIP 表 + 按分类明细 + 类别/Profile/优先级统计）；
 3. 就地替换 README.md 中 `<!-- REGISTRY-STATUS:BEGIN -->` 与 `<!-- REGISTRY-STATUS:END -->`
-   之间的内容（无 marker 时退出并提示，避免破坏其它手工内容）；
-4. 生成 vip_catalog.md（完整 VIP 明细索引）。
+   之间的内容（无 marker 时退出并提示，避免破坏其它手工内容）。
 
 用法：
-  uv run python tools/gen_catalog.py --root .            # 校验并就地刷新 README.md / vip_catalog.md
+  uv run python tools/gen_catalog.py --root .            # 校验并就地刷新 README.md
   uv run python tools/gen_catalog.py --root . --dry-run  # 仅打印将写入的区块，不写文件
   uv run python tools/gen_catalog.py --root . --check    # 只读检查一致性（退出码 1=不一致）
 
@@ -30,7 +29,6 @@ except ImportError:  # pragma: no cover
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REGISTRY_PATH = os.path.join(ROOT, "registry.yaml")
 README_PATH = os.path.join(ROOT, "README.md")
-CATALOG_PATH = os.path.join(ROOT, "vip_catalog.md")
 
 BEGIN_MARKER = "<!-- REGISTRY-STATUS:BEGIN -->"
 END_MARKER = "<!-- REGISTRY-STATUS:END -->"
@@ -138,6 +136,13 @@ def _status_link(e):
     return name
 
 
+def _quality_str(e):
+    quality = e.get("quality") or {}
+    maturity = quality.get("maturity", "-")
+    qualif = quality.get("qualification", "-")
+    return "%s / %s" % (maturity, qualif)
+
+
 def build_status_section(reg):
     """从 registry 生成状态总览 Markdown 区块（不含 BEGIN/END marker）。"""
     vips = reg.get("vips", [])
@@ -167,8 +172,8 @@ def build_status_section(reg):
         for e in qualified:
             qrows.append([e.get("id", ""), _status_link(e), e.get("family", ""),
                           e.get("profile", ""), e.get("priority", ""),
-                          e.get("version", ""), e.get("group", "")])
-        lines.append(_md_table(["ID", "VIP", "名称", "Profile", "优先级", "版本", "类别"], qrows))
+                          _quality_str(e), e.get("version", ""), e.get("group", "")])
+        lines.append(_md_table(["ID", "VIP", "名称", "Profile", "优先级", "质量(M/Qual)", "版本", "类别"], qrows))
     else:
         lines.append("（当前无已准入 VIP）")
     lines.append("")
@@ -232,52 +237,17 @@ def build_status_section(reg):
         lines.append("")
         rows = []
         for e in entries:
-            quality = e.get("quality") or {}
-            maturity = quality.get("maturity", "-")
-            qualif = quality.get("qualification", "-")
             rows.append([
                 e.get("id", ""),
                 _status_link(e),
                 e.get("status", ""),
                 e.get("profile", ""),
                 e.get("priority", ""),
-                "%s / %s" % (maturity, qualif),
+                _quality_str(e),
                 e.get("version", "-"),
                 e.get("description", ""),
             ])
         lines.append(_md_table(["ID", "VIP", "状态", "Profile", "优先级", "质量(M/Qual)", "版本", "功能"], rows))
-        lines.append("")
-    return "\n".join(lines)
-
-
-def build_catalog_doc(reg):
-    """生成 vip_catalog.md 完整明细。"""
-    vips = reg.get("vips", [])
-    lines = ["# AIXSILICON VIP Catalog",
-             "",
-             "> 由 `tools/gen_catalog.py` 依据 `registry.yaml`（SSOT）自动生成；勿手工编辑。",
-             "> 最后更新：`%s`" % reg.get("updated", "未知"),
-             "",
-             "完整 VIP 明细（%d 条），按类别分组。" % len(vips),
-             ""]
-    groups = {}
-    for e in vips:
-        groups.setdefault(e.get("group", "(未分类)"), []).append(e)
-    for group in sorted(groups):
-        entries = sorted(groups[group], key=lambda e: e.get("id", ""))
-        lines.append("## %s（%d）" % (group, len(entries)))
-        lines.append("")
-        rows = []
-        for e in entries:
-            quality = e.get("quality") or {}
-            maturity = quality.get("maturity", "-")
-            qualif = quality.get("qualification", "-")
-            rows.append([e.get("id", ""), _status_link(e), e.get("family", ""),
-                         e.get("profile", ""), e.get("priority", ""),
-                         e.get("hwif", "-"), e.get("status", ""),
-                         "%s / %s" % (maturity, qualif),
-                         e.get("version", "-"), e.get("description", "")])
-        lines.append(_md_table(["ID", "VIP", "名称", "Profile", "优先级", "HWIF", "状态", "质量(M/Qual)", "版本", "描述"], rows))
         lines.append("")
     return "\n".join(lines)
 
@@ -291,7 +261,7 @@ def replace_between(text, begin, end, replacement):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog="gen_catalog.py", description="VIP Catalog / README 状态总览生成")
+    ap = argparse.ArgumentParser(prog="gen_catalog.py", description="VIP README 状态总览生成")
     ap.add_argument("--root", default=".", help="aixsilicon-vip-repo 根目录")
     ap.add_argument("--dry-run", action="store_true", help="仅打印将写入的区块，不写文件")
     ap.add_argument("--check", action="store_true", help="只读检查一致性（不写文件）")
@@ -300,7 +270,6 @@ def main(argv=None):
     root = os.path.abspath(args.root)
     registry_path = os.path.join(root, "registry.yaml")
     readme_path = os.path.join(root, "README.md")
-    catalog_path = os.path.join(root, "vip_catalog.md")
 
     if not os.path.exists(registry_path):
         print("FAIL: 未找到 %s" % registry_path, file=sys.stderr)
@@ -322,7 +291,6 @@ def main(argv=None):
         return 10
 
     status_section = build_status_section(reg)
-    catalog_doc = build_catalog_doc(reg)
 
     if not os.path.exists(readme_path):
         print("FAIL: 未找到 %s（README 缺少状态总览 marker）" % readme_path, file=sys.stderr)
@@ -345,18 +313,13 @@ def main(argv=None):
     if args.dry_run:
         print("=== README 状态总览（待写入）===")
         print(status_section)
-        print("=== vip_catalog.md（待写入）===")
-        print(catalog_doc[:2000])
         print("...(dry-run 不写盘)")
         return 0
 
     with open(readme_path, "w", encoding="utf-8") as f:
         f.write(new_readme)
-    with open(catalog_path, "w", encoding="utf-8") as f:
-        f.write(catalog_doc)
-    print("OK: 已刷新 README.md 状态总览与 vip_catalog.md（%d 个 VIP）" % len(reg.get("vips", [])))
+    print("OK: 已刷新 README.md 状态总览（%d 个 VIP）" % len(reg.get("vips", [])))
     print("    %s" % readme_path)
-    print("    %s" % catalog_path)
     return 0
 
 

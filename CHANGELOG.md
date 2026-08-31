@@ -14,14 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 目录结构重构为 `vip/{amba,peripheral,memory,chip,debug,io,storage,safety,common}` 分类组织。
 - VLNV 统一升级为 `aixsilicon:vip:<name>:<version>`（存量 `aix:vip:*` 不再使用）。
 - 新增 `registry.yaml` 作为 VIP 状态唯一 SSOT（参考 cbb repo 治理模式），
-  `vip_catalog.md` 与 README 状态总览由脚本派生。
+  README 状态总览由脚本派生。
 - 新增 `tools/` 确定性脚本（gen_catalog / check_vip / regression）。
 - 删除存量未 Qualified 的 VIP 资产（protocol/peripheral/system/safety/common 等），
   待 VIP Development Suite 产出并通过质量门禁后重新准入。
 
 ### Added
 - FuseSoC Library 注册（`fusesoc.conf`）。
-- `vip_catalog.md` 自动生成索引。
 
 ### Removed
 - 存量 `aix:vip:*` 资产（APB/AXI/HAC-IF 等 V0_PROTOTYPE 工程包）。

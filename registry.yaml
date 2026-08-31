@@ -4,7 +4,7 @@
 # quality.maturity: M0 Draft / M1 Experimental / M2 Alpha / M3 Beta / M4 Qualified / M5 Released
 # quality.qualification: NOT_RUN / PASS / FAIL / BLOCKED / WAIVED / -
 # 修改入口: 直接编辑本文件后运行 'uv run python tools/gen_catalog.py --root .' 校验，
-#           并同步刷新 README.md 状态总览与 vip_catalog.md。
+#           并同步刷新 README.md 状态总览。
 # status=qualified 表示物理目录存在且通过验证；planned 条目无物理目录。
 # 生命周期: planned -> developing -> qualified -> deprecated
 schema_version: '1.0'
