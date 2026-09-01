@@ -5,7 +5,7 @@
 > 本文档是 AXI4 VIP 需求的唯一 SSOT。来源：
 > - 参考实现: `repos/aixsilicon_vip_repo/reference/tvip-axi`（Apache-2.0，Taichi Ishitani）
 > - 协议规范: ARM AMBA AXI4 协议（IHI 0022E），AXI4-Lite（IHI 0022E 附录）
-> - HWIF 契约: `aixsilicon:hwif:axi`（`IFC-AXI-001`，[`axi.interface.yaml`](../../../../aixsilicon_hwif_repo/bus/axi/contract/axi.interface.yaml)）
+> - HWIF 契约: `aixsilicon:hwif:axi`（`IFC-AXI-001`，[`axi.interface.yaml`](../../../../../aixsilicon_hwif_repo/bus/axi/contract/axi.interface.yaml)）
 > - VIP Plan 条目: `repos/aixsilicon_vip_repo/registry.yaml` `VIP-001`（axi4，FULL_UVM，P0）
 
 ---
@@ -82,7 +82,7 @@
 
 ## 4. 组件需求（The Engine，REQ-020 ~ REQ-030）
 
-按 Profile=`FULL_UVM` 裁剪组件（组件矩阵见 [`vip-architecture`](../../../../.roo/skills/vip-development-suite/skills/vip-architecture/SKILL.md)）。
+按 Profile=`FULL_UVM` 裁剪组件（组件矩阵见 [`vip-architecture`](../../../../../../.roo/skills/vip-development-suite/skills/vip-architecture/SKILL.md)）。
 
 | ID | 组件 | 类型 | 需求说明 | 参考实现 |
 | --- | --- | --- | --- | --- |
@@ -188,7 +188,7 @@
 
 ## 9. Qualification Requirements（REQ-071 ~ REQ-076）
 
-进入 Qualification（G5）前必须满足（详见 [`vip-qualification`](../../../../.roo/skills/vip-development-suite/skills/vip-qualification/SKILL.md)）：
+进入 Qualification（G5）前必须满足（详见 [`vip-qualification`](../../../../../../.roo/skills/vip-development-suite/skills/vip-qualification/SKILL.md)）：
 
 | ID | 需求 | 判定 |
 | --- | --- | --- |

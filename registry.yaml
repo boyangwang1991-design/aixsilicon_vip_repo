@@ -21,7 +21,7 @@ vips:
   hwif: axi4
   description: Master/Slave/Monitor/Checker/Coverage、outstanding、out-of-order、4KB
     boundary
-  status: planned
+  status: developing
   version: '-'
   path: vip/amba/axi4
   quality:
