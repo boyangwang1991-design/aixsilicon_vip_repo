@@ -1,6 +1,6 @@
 # AIXSILICON AXI4 VIP — 架构与设计（Architecture）
 
-> 文档 ID: `aixsilicon:vip:axi4:arch` · 版本: 0.1.0-draft · 状态: Planned（G1 待确认）
+> 文档 ID: `aixsilicon:vip:axi4:arch` · 版本: 0.2.0-draft · 状态: Planned（G1 待确认，按 requirement 0.2.0 同步）
 >
 > 上游输入: [`docs/requirement.md`](requirement.md)（AXI4-REQ-xxx）· HWIF `aixsilicon:hwif:axi`（`IFC-AXI-001`）
 > 参考实现: `repos/aixsilicon_vip_repo/reference/tvip-axi`
@@ -132,7 +132,7 @@ SVA ──► axi4_assertions（握手/时序/边界）
 | 信号来源 | 5 通道（aw/w/b/ar/r）信号集合、方向、位宽、握手与语义以 HWIF 契约为**唯一基准** |
 | 命名规范 | 采用 AXI 标准命名（无下划线，如 `awvalid`/`awaddr`/`awlock`/`awregion`/`awuser`），与 HWIF 契约及 `axi_if` 一致 |
 | 复用方式 | VIP `axi4_if` 的端口与 HWIF `axi_if`/`axi_pkg` 聚合结构对齐（View B/A）；VIP 不重新定义接口契约 |
-| 完整信号集 | VIP 采用 HWIF **完整 AXI 信号**：含必选 `awlock/arlock`、`awregion/arregion`，以及 capability `awatop`/`awuser/wuser/buser/aruser/ruser`（V1.0 保留信号、可置常量） |
+| 完整信号集 | VIP 采用 HWIF **完整 AXI 信号**：含必选 `awlock/arlock`、`awregion/arregion`，以及 capability `awatop`/`awuser/wuser/buser/aruser/ruser`（V1.0 保留信号、可置常量）；`awlock/arlock` 在 AXI4 中**仅表达 exclusive access**（REQ-0103/0115），不表达 AXI3 式 locked transaction |
 | 与 tvip-axi 差异 | tvip-axi 参考接口仅核心信号与 HWIF 一致，**缺 lock/region/atop/user**；`axi4_if` 以 HWIF 契约为准，不得照搬 tvip-axi |
 | 变更联动 | HWIF 契约变更 → 本架构同步更新 + CHANGELOG 记录（HWIF 为唯一 SSOT） |
 
@@ -147,7 +147,7 @@ aixsilicon:hwif:axi ──► aixsilicon:vip:axi4 ──► ip-development-suite
 ## 6. 包结构与目录布局
 
 ```text
-vip_axi4/
+vip/amba/axi4/
 ├── docs/
 │   ├── requirement.md        # 本 VIP 需求 SSOT（G0）
 │   └── architecture.md       # 本文档（G1）
@@ -184,9 +184,11 @@ vip_axi4/
     `bvalid/bready/bid/bresp`、`arvalid/arready/arid/araddr/arlen/arsize/arburst/arlock/arcache/arprot/arqos/arregion`、`rvalid/rready/rid/rdata/rresp/rlast`；
   - capability 保留信号：`awatop`、`awuser/wuser/buser/aruser/ruser`（V1.0 可置常量/不做驱动，后续版本激活）；
   - 在 tvip-axi 基础上**新增 `awlock/arlock` 与 `awregion/arregion`**（HWIF 必选）。
+  - **Exclusive 语义**：`awlock/arlock=1` 表达 **exclusive access**（master 发起独占读/写，slave memory 维护独占标记与 EXOKAY 响应，REQ-0103/0115）；**不支持** AXI3 式 locked transaction。
 - **握手驱动**：READY 默认值与延迟配置（`default_*ready` + `*_ready_delay`）实现可控背压；VALID 保持规则由 driver 保证、由 checker/SVA 验证。
 - **响应引擎（Slave）**：按 `response_ordering` 与 ID 分流至独立响应队列；`start_delay`/`response_delay` 控制延迟；交织粒度受 `min/max_interleave_size` 约束（源自 `tvip_axi_slave_driver` 的 start_delay_consumer / response_item 机制）。
-- **写数据对齐**：`axi4_payload_store` 支持 W 数据与 AW 地址到达顺序不一致（gapped write data）与读数据交织重建。
+- **写数据对齐**：`axi4_payload_store` 支持 W 数据与 AW 地址到达顺序不一致（gapped write data）与读数据交织重建；**W 数据必须按 AW 事务顺序提供，禁止 AXI3 式 write-data interleaving**（REQ-0114）。
+- **数据传输语义**：支持 narrow / unaligned / WSTRB（partial & sparse strobe）——`axi4_item` 携带 strobe 语义，`axi4_memory` 仅更新 WSTRB=1 的 byte，Monitor 正确重建 byte lane（REQ-0100/0101/0102）。
 - **错误注入**：`axi4_violation_injector` 基于配置在指定通道注入违规（handshake/4KB/burst/ID ordering/response），由 `axi4_checker` 检测，形成 Mutation 检测率。
 
 ---
@@ -197,4 +199,4 @@ vip_axi4/
 - [x] 组件裁剪与 Profile 一致（对照组件矩阵）
 - [x] 三大核心模型明确（Stimulus / Observation / Qualification）
 - [x] 与 HWIF 契约一致（引用 `aixsilicon:hwif:axi`）
-- [x] 与 docs/requirement.md 能力覆盖一致（REQ-001~076）
+- [x] 与 docs/requirement.md 能力覆盖一致（REQ-001~076 + 0100/0103/0110 扩展；Exclusive 与 AXI3 Locked 语义分离）

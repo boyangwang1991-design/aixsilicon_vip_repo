@@ -12,7 +12,7 @@
 
 ## 状态
 
-`Developing`（当前仅 `docs/` 就绪：需求 G0 / 架构 G1 输入；`src/` 源码与 Self Test 待开发）
+`Developing`（当前仅 `docs/` 就绪：需求 G0（0.2.0-draft，含 AXI4 能力模型）/ 架构 G1 输入；`src/` 源码与 Self Test 待开发）
 
 ## 目录
 
@@ -36,7 +36,7 @@ vip/amba/axi4/
 
 | 交付物 | 路径 | 状态 |
 | --- | --- | --- |
-| 需求规格 | `docs/requirement.md` | ✅ G0 输入 |
+| 需求规格 | `docs/requirement.md` | ✅ G0（0.2.0-draft） |
 | 架构与设计 | `docs/architecture.md` | ✅ G1 输入 |
 | 验证方案 | `docs/validation-plan.md` | ⬜ 待建 |
 | 追溯矩阵 | `docs/rtm.md` | ⬜ 待建 |
