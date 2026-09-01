@@ -1,6 +1,6 @@
 # AIXSILICON AXI4 VIP — 需求规格（Requirement Specification）
 
-> 文档 ID: `aixsilicon:vip:axi4:req` · 版本: 0.2.0-draft · 状态: Planned（G0 修订中）
+> 文档 ID: `aixsilicon:vip:axi4:req` · 版本: 0.3.0-draft · 状态: Planned（G0 修订中）
 >
 > 本文档是 AXI4 VIP 需求的唯一 SSOT。来源：
 > - 参考实现: `repos/aixsilicon_vip_repo/reference/tvip-axi`（Apache-2.0，Taichi Ishitani）
@@ -22,11 +22,33 @@
 - **参考实现**: `tvip-axi` 提供能力基线（功能/配置/组件/序列库），本需求在此基础上补齐协议检查（Checker/SVA）、
   覆盖率闭合、错误注入与自验证（VIP Self Test）能力，达到 AIXSILICON VIP 质量门禁（G0–G6）。
 - **双 Protocol Profile**: 本 VIP 区分 `AXI4_FULL`（完整 AXI4）与 `AXI4_LITE`（AXI4-Lite）两种能力剖面，
-  以 `protocol` 配置选择，避免在 sequence 内散落 `if(protocol==AXI4LITE)`（见 §2.2 与 §5）。
+  以 `protocol` 配置选择（见 §2.2 与 §5）。
+
+### 1.1 文档分层原则
+
+本规格是 **Requirement Specification**，只回答 **What**：
+
+> VIP 必须提供什么能力、用户能够做什么、系统必须满足什么约束。
+
+**How**（如何实现：组件拆分、继承关系、内部队列、policy/callback 选型）属于 `architecture.md`；
+**API 签名**（类/方法/参数/analysis port 的具体形式）属于 `api-reference.md`。
+本规格中的组件名/配置字段名仅作**建议目标架构的指引**，不锁死实现；最终实现只要满足本条能力即可。
+
+### 1.2 需求分类模型（5 类）
+
+本文档按 5 类需求组织，可作为后续 APB/AHB/AXI-Stream/CHI 等所有 VIP 的统一模板：
+
+| 类别 | 回答 | 本章 |
+| --- | --- | --- |
+| 1. Protocol Requirements | 协议能力（支持什么协议/事务/信号） | §2 |
+| 2. Verification Capability Requirements | 激励 / Monitor / Checker / Coverage / Error Injection / 参考模型 | §3、§4 |
+| 3. External Interface Requirements | 用户如何使用与集成 VIP（API/Observation/Config/Slave 定制/扩展/RAL/元数据） | §7（配置 §5） |
+| 4. Engineering Requirements | Simulator / FuseSoC / Debug / Logging / Timeout | §5、§6、§8 |
+| 5. Qualification Requirements | Self-test / Coverage / Mutation / Regression / Evidence | §10 |
 
 ---
 
-## 2. Feature List（功能需求 REQ-001 ~ REQ-009 + 扩展）
+## 2. Protocol Requirements —— Feature List（REQ-001 ~ REQ-009 + 扩展）
 
 AXI4 能力以 **Feature Model** 组织：Feature → Requirement → Sequence → Monitor → Checker/SVA → Coverage → Self-Test → Mutation。
 以下为核心 Feature 与新增能力。
@@ -41,7 +63,7 @@ AXI4 能力以 **Feature Model** 组织：Feature → Requirement → Sequence �
 | AXI4-REQ-003A | 突发长度（Burst Length） | 长度合法性：**INCR 1–256**；**FIXED 1–16**；**WRAP 仅 2/4/8/16**；AXI4-Lite 固定 len=0（1 beat） | `tvip_axi_types_pkg`（burst length） | 主动激励 + 检查 |
 | AXI4-REQ-003B | 突发地址生成（Burst Address Generation） | VIP 必须能由 `AxADDR/AxSIZE/AxLEN/AxBURST` 计算每个 beat 的实际 byte address；正确处理 wrap boundary、narrow/unaligned 组合 | 新增（参考实现具备，本 VIP 显式建模） | 主动激励 + 检查 |
 | AXI4-REQ-003C | 突发合法性（Burst Legality） | 检查：4KB 边界、WRAP 长度与 wrap boundary、AxSIZE 合法性（≤ DATA_W/8）、地址对齐/unaligned 规则、**禁止提前终止**、WLAST/RLAST 一致性 | 新增 | Checker/SVA |
-| AXI4-REQ-004 | Outstanding（未完成请求） | 支持多笔未完成事务，Master 可重叠地址/数据，Slave 可延迟响应；配置细化见 REQ-045/0511（read/write/per-id） | `configuration.outstanding_responses` | 主动激励 + 检查 |
+| AXI4-REQ-004 | Outstanding（未完成请求） | 支持多笔未完成事务，Master 可重叠地址/数据，Slave 可延迟响应；配置细化见 REQ-046/0510 | `configuration.outstanding_responses` | 主动激励 + 检查 |
 | AXI4-REQ-005 | ID 管理 | 支持可配置 ID 宽度（0–32 bit，AXI4-Lite 固定 0），支持多 ID 与 ID 排序 | `tvip_axi_configuration.id_width` | 主动激励 + 检查 |
 | AXI4-REQ-006 | 背压（Backpressure） | Master/Slave 均可配置握手通道（VALID/READY）的默认值与延迟，制造 backpressure | `default_*ready` + `*_ready_delay` | 主动激励 |
 | AXI4-REQ-007 | 延迟写数据/写响应 | Slave 支持延迟写数据（gapped write data）与延迟响应 | `write_data_delay`、`response_delay`、`response_start_delay` | 主动激励 |
@@ -71,7 +93,7 @@ AXI4 与 AXI4-Lite 不是"同一协议的开关"，而是**两种能力剖面**�
 | AXI4-REQ-0100 | **Narrow Transfer** | 支持 `transfer_size < bus_width`（如 DATA_WIDTH=64、AWSIZE=2 → 每 beat 4B）。Master 能产生、Slave 能接收、Monitor 正确重建、Checker 检查 byte lane；Coverage 覆盖 `SIZE × BUS_WIDTH × BURST_TYPE`。VIP 必须理解 AxSIZE/WSTRB/AxADDR/byte lane 关系（lane 随地址与 burst 移动） | 激励 + 监控 + 检查 + 覆盖 |
 | AXI4-REQ-0101 | **Unaligned Transfer** | 支持合法 unaligned 访问：unaligned read / unaligned write / unaligned+narrow / unaligned+INCR burst。VIP 必须知道首拍有效 byte lane、WSTRB 取值、下一拍地址推进；检查 WSTRB/byte lane 合法性、地址递增、4KB 边界 | 激励 + 监控 + 检查 |
 | AXI4-REQ-0102 | **Write Strobe / Partial Write** | Master 生成合法 WSTRB：支持 partial write（部分字节写）与 sparse byte enable；Slave memory model **仅更新 WSTRB=1 的 byte**；Checker 校验 WSTRB 不覆盖当前 transfer 之外的 byte lane；Coverage 覆盖 full/partial/edge/sparse/narrow/unaligned strobe | 激励 + 参考模型 + 检查 + 覆盖 |
-| AXI4-REQ-0103 | **Exclusive Access（独占访问）** | 使用 `AxLOCK`（EXCLUSIVE=1）表达独占访问：Master 发起 exclusive read/write，Slave memory 维护独占标记与同地址冲突检测，响应编码 EXOKAY/OKAY 语义正确；配 `exclusive_support` 开关（见 REQ-0513） | 激励 + 参考模型 + 检查 + 覆盖 |
+| AXI4-REQ-0103 | **Exclusive Access（独占访问）** | 使用 `AxLOCK`（EXCLUSIVE=1）表达独占访问：Master 发起 exclusive read/write，Slave memory 维护独占标记与同地址冲突检测，响应编码 EXOKAY/OKAY 语义正确；配 `exclusive_support` 开关（见 REQ-0511） | 激励 + 参考模型 + 检查 + 覆盖 |
 | AXI4-REQ-0104 | **Sideband（AxCACHE/AxPROT/AxQOS/AxREGION/AxUSER）** | 对边带信号建立 capability 模型（PRESENT/DRIVE/CHECK/COVERAGE，见 §2.4），而非仅"接口保留、置常量" | 激励 + 检查 + 覆盖 |
 | AXI4-REQ-0105 | **Reset 中 outstanding 行为** | 定义复位对 outstanding 事务的影响：复位期间所有 VALID=0、握手终止、未响应事务丢失策略；复位释放后无残留状态；Checker 校验复位无未完成握手 | 激励 + 检查 |
 
@@ -101,7 +123,7 @@ AXI4 与 AXI4-Lite 不是"同一协议的开关"，而是**两种能力剖面**�
 | **AXI3 Locked Transaction** | ❌ 不支持 | **AXI4 已移除 locked transactions**；`AxLOCK` 在 AXI4 中仅用于表达 exclusive access，不得解释为 AXI3 式 locked burst |
 | Narrow Transfer | ✅ V1.0 | REQ-0100 |
 | Unaligned Transfer | ✅ V1.0 | REQ-0101 |
-| Write Strobe / Partial Write | ✅ V1.0 | REQ-0102；`axi4_memory` 仅更新 WSTRB=1 的 byte |
+| Write Strobe / Partial Write | ✅ V1.0 | REQ-0102；Slave 存储模型仅更新 WSTRB=1 的 byte |
 | **Write Data Interleaving（AXI3 WID）** | ❌ 不支持 | **AXI4 已移除 write-data interleaving**；W 数据必须按 AW 事务顺序提供（REQ-0114 negative rule） |
 | Region（区域标识） | ✅ V1.0 | HWIF `awregion/arregion` 为 **required**；接口含信号 + 驱动 + 基本检查 |
 | ATOP（原子操作） | ⬜ 接口保留 | HWIF `awatop` 为 capability；V1.0 置常量/不驱动，V2.0 激活 |
@@ -115,7 +137,7 @@ AXI4 与 AXI4-Lite 不是"同一协议的开关"，而是**两种能力剖面**�
 
 ---
 
-## 3. Protocol Rules（协议规则 REQ-010 ~ REQ-019 + 扩展）
+## 3. Verification Capability —— Protocol Rules（协议规则 REQ-010 ~ REQ-019 + 扩展）
 
 以下为必须被检查的协议规则（对应 Checker/SVA 可检查项，见 RTM）。
 一级分类 + 细分规则共同构成 Checker 规格基线（V1.0 目标 25~30 条规则）。
@@ -151,30 +173,32 @@ AXI4 与 AXI4-Lite 不是"同一协议的开关"，而是**两种能力剖面**�
 
 ---
 
-## 4. 组件需求（The Engine，REQ-020 ~ REQ-033）
+## 4. Verification Capability —— 组件能力（REQ-020 ~ REQ-033）
 
-按 Profile=`FULL_UVM` 裁剪组件（组件矩阵见 [`vip-architecture`](../../../../../../.roo/skills/vip-development-suite/skills/vip-architecture/SKILL.md)）。
+本节定义 VIP 必须提供的**验证能力**（协议激励、监控、检查、覆盖、参考模型、寄存器集成）。
+组件名与继承关系为**建议目标架构**（详见 `architecture.md`），需求层不锁死实现；
+最终实现可选用不同基类/组装方式，只要满足本节点能力。
 
-| ID | 组件 | 类型 | 需求说明 | 参考实现 |
+| ID | 能力 | 建议组件 | 需求说明 | 参考实现 |
 | --- | --- | --- | --- | --- |
 | AXI4-REQ-020 | 接口 interface | `axi4_if` | 提供 5 通道**完整 AXI 信号**（无下划线标准命名：awvalid/awid/awaddr/awlen/awsize/awburst/awlock/awcache/awprot/awqos/awregion/awatop/awuser 等）与 clocking block / modport（master/slave/monitor）；信号以 HWIF `IFC-AXI-001` 为唯一基准 | HWIF `axi_if`（tvip-axi 仅作参考，缺 lock/region/atop/user） |
-| AXI4-REQ-021 | 事务 transaction | `axi4_item extends uvm_sequence_item` | 读/写访问描述：id/address/burst/len/size/memory_type/protection/qos/region/lock(exclusive)/strobe(WSTRB 语义)/data/response；含窄/非对齐字段、时序字段与 begin/end 事件；满足 Constraint Model（§6） | `tvip_axi_item.svh`（补齐 strobe 语义/lock/exclusive） |
-| AXI4-REQ-022 | 配置 config | `axi4_configuration` | 见 §5 配置需求 | `tvip_axi_configuration.svh` |
-| AXI4-REQ-023 | Master Agent | `axi4_master_agent extends uvm_agent` | 组装 master sequencer/driver/monitor（写监控 + 读监控），支持 ACTIVE/PASSIVE | `tvip_axi_master_agent.svh` |
-| AXI4-REQ-024 | Slave Agent | `axi4_slave_agent extends uvm_agent` | 组装 slave sequencer/driver/monitor + data monitor，支持 ACTIVE/PASSIVE | `tvip_axi_slave_agent.svh` |
-| AXI4-REQ-025 | Sequencer | `axi4_master_sequencer` / `axi4_slave_sequencer` | 基于 `uvm_sequencer`，承载 sequence 发送 | `tvip_axi_*_sequencer.svh` |
+| AXI4-REQ-021 | 事务 transaction | `axi4_item` | 读/写访问描述：id/address/burst/len/size/memory_type/protection/qos/region/lock(exclusive)/strobe(WSTRB 语义)/data/response；含窄/非对齐字段、时序字段与 begin/end 事件；满足 Transaction Constraint Model（§6） | `tvip_axi_item.svh`（补齐 strobe 语义/lock/exclusive） |
+| AXI4-REQ-022 | 配置 config | `axi4_configuration` | 统一配置接口，见 §5 配置需求与 §7 REQ-083 | `tvip_axi_configuration.svh` |
+| AXI4-REQ-023 | Master Agent | `axi4_master_agent` | 组装 master sequencer/driver/monitor（写监控 + 读监控），支持 ACTIVE/PASSIVE | `tvip_axi_master_agent.svh` |
+| AXI4-REQ-024 | Slave Agent | `axi4_slave_agent` | 组装 slave sequencer/driver/monitor + data monitor，支持 ACTIVE/PASSIVE | `tvip_axi_slave_agent.svh` |
+| AXI4-REQ-025 | Sequencer | `axi4_master_sequencer` / `axi4_slave_sequencer` | 基于标准 UVM sequencer 机制，承载 sequence 发送 | `tvip_axi_*_sequencer.svh` |
 | AXI4-REQ-026 | Driver | `axi4_master_driver` / `axi4_slave_driver` | 按事务驱动接口信号；支持 narrow/unaligned/WSTRB 生成、延迟写数据/响应、响应排序、读交织、exclusive 响应 | `tvip_axi_*_driver.svh`（补齐 narrow/unaligned/exclusive） |
-| AXI4-REQ-027 | Monitor | `axi4_master_monitor` / `axi4_slave_monitor`（写/读分离） | 被动采样并重建事务（Observation Model），正确处理 narrow/unaligned/byte lane，输出 analysis port | `tvip_axi_*_monitor.svh` |
-| AXI4-REQ-028 | Checker | `axi4_checker extends uvm_scoreboard` | 协议规则检查（REQ-010~019 + 0110~0116），支持错误注入预期检测；Ordering Model（§4.1） | 新增（参考未含，本 Suite 补齐） |
+| AXI4-REQ-027 | Monitor | `axi4_master_monitor` / `axi4_slave_monitor`（写/读分离） | 被动采样并重建事务（Observation Model），正确处理 narrow/unaligned/byte lane，通过标准 analysis 机制对外发布（见 REQ-082） | `tvip_axi_*_monitor.svh` |
+| AXI4-REQ-028 | Checker | `axi4_checker` | 协议规则检查（REQ-010~019 + 0110~0116），支持错误注入预期检测；实现 AXI Ordering Model（§4.1）；违规结构化输出（见 REQ-087） | 新增（参考未含，本 Suite 补齐） |
 | AXI4-REQ-029 | 断言 SVA | `axi4_assertions` | 时序/握手/边界 SVA（含 payload stability、burst legality，可绑定 interface） | 新增 |
 | AXI4-REQ-030 | 覆盖模型 | `axi4_coverage` | 四层覆盖（见 vip-coverage）；含 SIZE×BUS_WIDTH×BURST、WSTRB 形态、exclusive 等交叉覆盖 | 新增 |
-| AXI4-REQ-031 | 存储模型 | `axi4_memory` | Slave 侧内存镜像，读写访问行为模型；支持 **narrow/unaligned（仅更新 WSTRB=1 byte）**、延迟、错误注入、**exclusive 独占标记与冲突检测** | `tvip_axi_memory.svh`（补齐 WSTRB 语义/exclusive） |
-| AXI4-REQ-032 | 状态对象 | `axi4_status` | 保存运行时状态（含 memory 句柄、outstanding 计数 read/write/per-id） | `tvip_axi_status.svh` |
-| AXI4-REQ-033 | RAL 集成 | `axi4_ral_adapter` / `axi4_ral_predictor` | 提供 UVM RAL 寄存器模型到 AXI 总线的 adapter/predictor | `tvip_axi_ral_*.svh` |
+| AXI4-REQ-031 | 存储模型 | `axi4_memory` | Slave 侧内存镜像，读写访问行为模型；支持 **narrow/unaligned（仅更新 WSTRB=1 byte）**、延迟、错误注入、**exclusive 独占标记与冲突检测**；支持用户自定义 memory content（见 REQ-084） | `tvip_axi_memory.svh`（补齐 WSTRB 语义/exclusive） |
+| AXI4-REQ-032 | 状态对象 | `axi4_status` | 保存运行时状态（含 memory 句柄、outstanding 计数 read/write/per-id）；支撑运行时状态查询（见 REQ-088） | `tvip_axi_status.svh` |
+| AXI4-REQ-033 | RAL 集成 | `axi4_ral_adapter` / `axi4_ral_predictor` | 提供 UVM RAL **frontdoor access 与 prediction 集成**能力（能力要求见 REQ-086）；组件连接方式由架构决定 | `tvip_axi_ral_*.svh` |
 
 ### 4.1 AXI Ordering Model（排序模型）
 
-AXI 排序是 VIP 最核心的 Checker 之一。`axi4_checker` 内部维护按 ID 的队列模型：
+AXI 排序是 VIP 最核心的 Checker 之一。Checker（协议检查组件）内部维护按 ID 的排序模型：
 
 ```text
 read_request_queue[ID]    write_request_queue[ID]
@@ -186,9 +210,10 @@ read interleaving 合法性、write response ordering、**write data ordering（
 
 ---
 
-## 5. 配置需求（Configuration Interface，REQ-040 ~ REQ-059 + 扩展）
+## 5. Configuration Requirements（配置需求，REQ-040 ~ REQ-059 + 扩展）
 
-配置空间基于 `tvip_axi_configuration`，并在其基础上补充本 Suite 要求的调试/检查/覆盖开关。分层配置：system → agent → component。
+配置空间基于参考实现，并补充本 Suite 要求的调试/检查/覆盖开关。分层配置：system → agent → component。
+配置以统一 Configuration Interface 暴露给用户（见 §7 REQ-083）。
 
 ### 5.1 协议与位宽
 
@@ -205,7 +230,7 @@ read interleaving 合法性、write response ordering、**write data ordering（
 | ID | 配置项 | 类型/范围 | 默认 | 说明 |
 | --- | --- | --- | --- | --- |
 | AXI4-REQ-045 | `response_ordering` | IN_ORDER / OUT_OF_ORDER | OUT_OF_ORDER | Slave 响应排序模式 |
-| AXI4-REQ-046 | `outstanding_responses` | ≥0 | 0 | 允许的未完成响应数（0=不限制）；更细粒度见 REQ-0511 |
+| AXI4-REQ-046 | `outstanding_responses` | ≥0 | 0 | 允许的未完成响应数（0=不限制）；更细粒度见 REQ-0510 |
 | AXI4-REQ-047 | `enable_response_interleaving` | 0/1 | 0 | 读数据交织使能 |
 | AXI4-REQ-048 | `min/max_interleave_size` | ≥0 | 0/0 | 交织粒度范围 |
 | AXI4-REQ-049 | `response_weight_*` | -1.. | -1 | 各响应（OKAY/EXOKAY/SLVERR/DECERR）加权，用于随机响应注入 |
@@ -243,7 +268,7 @@ read interleaving 合法性、write response ordering、**write data ordering（
 
 ## 6. Transaction Constraint Model（事务约束空间）
 
-可复用 VIP 必须显式定义"什么是合法 AXI transaction space"，而非只有 sequence。`axi4_item` 约束体系：
+可复用 VIP 必须显式定义"什么是合法 AXI transaction space"，而非只有 sequence。事务对象约束体系：
 
 | 模式 | 说明 |
 | --- | --- |
@@ -264,7 +289,32 @@ invalid_burst            unstable_awlen/size     invalid_id
 
 ---
 
-## 7. 运行环境需求（The Toolkit，REQ-060 ~ REQ-063）
+## 7. External Interface Requirements（外部接口需求，REQ-080 ~ REQ-092）
+
+本节定义用户**如何使用与集成** VIP 的外部能力契约。**只约定能力，不规定具体 API 签名**；
+类名/方法/参数/analysis port 名称属于 `api-reference.md`，由架构（How）确定。
+
+| ID | 需求 | 说明 |
+| --- | --- | --- |
+| AXI4-REQ-080 | **Public API** | VIP 必须提供稳定、文档化的公共调用接口；用户无需访问 Driver、Monitor、内部队列等实现细节即可完成标准验证场景 |
+| AXI4-REQ-081 | **Programmatic Access** | Master VIP 必须支持通过高层调用接口完成 `read` / `write` / `burst_read` / `burst_write`；同时支持通过标准 UVM Sequence 接口完成高级场景激励 |
+| AXI4-REQ-082 | **Observation Interface** | VIP 必须提供标准事务观察接口，使 Scoreboard、Coverage、性能分析工具及其他验证组件能够订阅已重建的 AXI transaction |
+| AXI4-REQ-083 | **Configuration Interface** | VIP 必须提供统一配置接口，覆盖：Protocol profile、位宽、Outstanding、Delay、Backpressure、Checker、Coverage、Error injection、Debug；并支持**预定义配置 Profile** 与用户 override |
+| AXI4-REQ-084 | **Slave Behavior Customization** | Slave VIP 必须支持用户自定义 memory content、response、delay、backpressure、error response，且**无需修改 VIP 源码**（实现方式由架构决定：policy / callback / factory override） |
+| AXI4-REQ-085 | **Extension Mechanism** | VIP 必须提供**非侵入式**扩展机制，使用户能够在不修改 VIP 源码的前提下扩展或定制 transaction、response、monitoring 等行为（不绑定具体机制，如 uvm_callback / policy object） |
+| AXI4-REQ-086 | **RAL Integration** | VIP 必须支持 UVM RAL **frontdoor access** 与 **prediction** 集成（adapter/predictor 的连接方式由架构决定） |
+| AXI4-REQ-087 | **Violation Interface** | VIP 必须能够**结构化**报告协议违规事件，至少包含 `rule`、`severity`、`channel`、`time`、`transaction context`，并支持外部验证组件订阅（机器可读，而非仅 `uvm_error()` 文本） |
+| AXI4-REQ-088 | **Runtime Status** | VIP 必须提供运行时状态查询能力，至少包括 outstanding read/write、pending response、queue/activity、protocol violation count |
+| AXI4-REQ-089 | **Timeout Detection** | VIP 必须支持可配置 transaction/channel timeout，用于检测长期无响应、潜在 deadlock 或环境配置错误 |
+| AXI4-REQ-090 | **Passive Analysis** | Passive 模式不得仅提供 signal monitor；应至少支持 transaction reconstruction、protocol checking、coverage、statistics（适合 SoC 集成监控场景） |
+| AXI4-REQ-091 | **Machine-readable Capability** | VIP 必须提供 machine-readable metadata，描述 protocol、profiles、agent modes、supported features、public operations、configuration、sequences、coverage、limitations、version；供 VIP Repo、FuseSoC、Skill、AI Agent 消费 |
+| AXI4-REQ-092 | **Compatibility** | 同一 major version 内 Public API 应保持 backward compatibility；破坏性接口变更必须提升 major version |
+
+---
+
+## 8. Engineering Requirements（工程需求）
+
+### 8.1 运行环境（The Toolkit，REQ-060 ~ REQ-063）
 
 | ID | 需求 | 说明 |
 | --- | --- | --- |
@@ -273,18 +323,16 @@ invalid_burst            unstable_awlen/size     invalid_id
 | AXI4-REQ-062 | 回归分层 | smoke / feature / full（`vip_tool.py regression --tier`）；Profile 回归 `--profile axi4 / axi4lite` |
 | AXI4-REQ-063 | 回归记录 | 统一写入 `reports/quality/run_log.md`，与 Evidence Index 关联 |
 
----
-
-## 8. 可调试性需求（Debug-ability，REQ-064 ~ REQ-067）
+### 8.2 可调试性（Debug-ability，REQ-064 ~ REQ-067）
 
 | ID | 需求 | 说明 |
 | --- | --- | --- |
-| AXI4-REQ-064 | 事务日志 | `item` 全字段 `convert2string`，按 verbosity 分级（参考实现含 begin/end 时间戳；含窄/非对齐/strobe/exclusive 字段） |
-| AXI4-REQ-065 | 查询命令 | `debug_report()` 输出 outstanding 细粒度状态（见下），辅助 Address/Data/Response channel 解耦调试 |
+| AXI4-REQ-064 | 事务日志 | 事务全字段 `convert2string`，按 verbosity 分级（参考实现含 begin/end 时间戳；含窄/非对齐/strobe/exclusive 字段） |
+| AXI4-REQ-065 | 查询命令 | 运行时查询输出 outstanding 细粒度状态（见下），辅助 Address/Data/Response channel 解耦调试（能力见 REQ-088） |
 | AXI4-REQ-066 | 错误分类 | 协议错误 / 环境错误 / 数据错误，错误信息带 `[REQ-xxx]` 定位 |
 | AXI4-REQ-067 | 协议栈分层 | 事务级（Transaction）为主；复杂场景可加数据链路级（DataLink，如交织/乱序）日志 |
 
-`debug_report()` 建议输出（Outstanding 精细化）：
+Outstanding 细粒度状态（示例，API 形式见 api-reference）：
 
 ```text
 READ:
@@ -296,11 +344,11 @@ WRITE:
 
 ---
 
-## 9. 交付需求（The Manual，REQ-068 ~ REQ-070）
+## 9. Delivery Requirements（交付需求，REQ-068 ~ REQ-070）
 
 | ID | 需求 | 说明 |
 | --- | --- | --- |
-| AXI4-REQ-068 | 文档交付 | 用户指南（user-guide）、配置手册（configuration）、架构（architecture）、限制（limitation） |
+| AXI4-REQ-068 | 文档交付 | 用户指南（user-guide）、配置手册（configuration）、架构（architecture）、限制（limitation）、API 参考（api-reference） |
 | AXI4-REQ-069 | 示例与自验证 | `examples/` 最小 DUT + `self_test/` VIP Self Test（smoke/feature/corner/error/random/stress） |
 | AXI4-REQ-070 | 源码交付模式 | open（Apache-2.0 兼容；参考 tvip-axi 为 Apache-2.0） |
 
@@ -325,16 +373,17 @@ WRITE:
 
 | 分组 | 编号范围 | 数量 |
 | --- | --- | --- |
-| Feature List（核心） | AXI4-REQ-001 ~ 009（含 003A/003B/003C） | 12 |
-| Feature 扩展（P0/P1） | AXI4-REQ-0100 ~ 0105 | 6 |
-| Protocol Rules（基础） | AXI4-REQ-010 ~ 019 | 10 |
-| Protocol Rules（扩展） | AXI4-REQ-0110 ~ 0116 | 7 |
-| 组件需求 | AXI4-REQ-020 ~ 033 | 14 |
-| 配置需求（基础） | AXI4-REQ-040 ~ 059 | 20 |
-| 配置需求（扩展） | AXI4-REQ-0510 ~ 0513 | 4 |
-| 运行环境 | AXI4-REQ-060 ~ 063 | 4 |
-| 可调试性 | AXI4-REQ-064 ~ 067 | 4 |
-| 交付需求 | AXI4-REQ-068 ~ 070 | 3 |
+| Protocol —— Feature List（核心） | AXI4-REQ-001 ~ 009（含 003A/003B/003C） | 12 |
+| Protocol —— Feature 扩展（P0/P1） | AXI4-REQ-0100 ~ 0105 | 6 |
+| Verification —— Protocol Rules（基础） | AXI4-REQ-010 ~ 019 | 10 |
+| Verification —— Protocol Rules（扩展） | AXI4-REQ-0110 ~ 0116 | 7 |
+| Verification —— 组件能力 | AXI4-REQ-020 ~ 033 | 14 |
+| Configuration（基础） | AXI4-REQ-040 ~ 059 | 20 |
+| Configuration（扩展） | AXI4-REQ-0510 ~ 0513 | 4 |
+| External Interface | AXI4-REQ-080 ~ 092 | 13 |
+| Engineering —— 运行环境 | AXI4-REQ-060 ~ 063 | 4 |
+| Engineering —— 可调试性 | AXI4-REQ-064 ~ 067 | 4 |
+| Delivery | AXI4-REQ-068 ~ 070 | 3 |
 | Qualification | AXI4-REQ-071 ~ 076 | 6 |
 
 > 编号一经发布不得重用；废弃需求标记 `deprecated` 而非删除。
@@ -357,18 +406,20 @@ WRITE:
 
 ## 13. 完成标准（G0 Checklist）
 
-- [x] Feature List（REQ-001~009 + 003A/003B/003C）
-- [x] Feature 扩展：Narrow（0100）/ Unaligned（0101）/ WSTRB（0102）/ Exclusive（0103）/ Sideband（0104）/ Reset（0105）
+- [x] 文档分层：需求（What）/ 架构（How）/ API 分离；5 类需求分类（§1.2）
+- [x] Protocol —— Feature List（REQ-001~009 + 003A/003B/003C）
+- [x] Protocol —— Feature 扩展：Narrow（0100）/ Unaligned（0101）/ WSTRB（0102）/ Exclusive（0103）/ Sideband（0104）/ Reset（0105）
 - [x] 能力边界：**Exclusive Access（V1.0 支持，AxLOCK）与 AXI3 Locked（不支持）分离修正**
 - [x] AXI4-Full / AXI4-Lite 双能力剖面（§2.2）
-- [x] Protocol Rules（REQ-010~019 + 0110~0116，可映射 Checker/SVA）
+- [x] Verification —— Protocol Rules（REQ-010~019 + 0110~0116，可映射 Checker/SVA）
 - [x] AXI Ordering Model + write-data ordering negative rule（REQ-0114）
 - [x] Payload stability（REQ-0110）
 - [x] Transaction Constraint Model（§6）
-- [x] 组件需求（REQ-020~033，Engine 组件清单，含 exclusive/narrow/strobe 能力）
-- [x] 配置需求（REQ-040~059 + 0510~0513，配置空间 + 分层）
-- [x] 运行环境需求（REQ-060~063）
-- [x] 可调试性需求（REQ-064~067，outstanding 细粒度 debug_report）
-- [x] 交付需求（REQ-068~070）
+- [x] Verification —— 组件能力（REQ-020~033，不锁死继承关系，含 exclusive/narrow/strobe 能力）
+- [x] Configuration（REQ-040~059 + 0510~0513，配置空间 + 分层）
+- [x] **External Interface（REQ-080~092：Public API / Programmatic / Observation / Config / Slave 定制 / Extension / RAL / Violation / Status / Timeout / Passive / Metadata / Compatibility）**
+- [x] Engineering —— 运行环境（REQ-060~063）
+- [x] Engineering —— 可调试性（REQ-064~067，outstanding 细粒度）
+- [x] Delivery（REQ-068~070）
 - [x] Qualification Requirements（REQ-071~076）
 - [x] 与 HWIF 契约一致（引用 `aixsilicon:hwif:axi`）
