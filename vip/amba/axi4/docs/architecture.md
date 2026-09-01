@@ -1,6 +1,6 @@
 # AIXSILICON AXI4 VIP — 架构与设计（Architecture）
 
-> 文档 ID: `aixsilicon:vip:axi4:arch` · 版本: 0.2.0-draft · 状态: Planned（G1 待确认，按 requirement 0.2.0 同步）
+> 文档 ID: `aixsilicon:vip:axi4:arch` · 版本: 0.2.0-draft · 状态: Planned（G1 待确认，按 requirement 0.4.0 同步）
 >
 > 上游输入: [`docs/requirement.md`](requirement.md)（AXI4-REQ-xxx）· HWIF `aixsilicon:hwif:axi`（`IFC-AXI-001`）
 > 参考实现: `repos/aixsilicon_vip_repo/reference/tvip-axi`
