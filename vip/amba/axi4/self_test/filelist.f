@@ -1,0 +1,11 @@
+// =============================================================================
+// axi4 VIP Self Test Filelist
+// 编译顺序：types_pkg → if → assertions → pkg → tb/env/test → tb top
+// =============================================================================
+../src/axi4_types_pkg.sv
+../src/axi4_if.sv
+../src/checker/axi4_assertions.sv
+../src/axi4_pkg.sv
+tb/axi4_smoke_env.sv
+tb/axi4_smoke_test.sv
+tb/axi4_smoke_tb.sv
