@@ -12,12 +12,12 @@
 
 ## 状态
 
-`Developing`：**G0 PASS / Requirement Freeze（requirement 1.0.0-g0-baseline）**：协议事实修正（AXI4-Lite capability matrix、
-Exclusive 语义、AWATOP 边界）、新增 Feature（AW/W 解耦 / Handshake Pattern / Byte-Lane Model / Zero-strobe）、
-**Requirement ID 局部编号**（`AXI4-REQ-<CATEGORY>-<NNN>`：PRO/RUL/TRN/STM/VER/CFG/API/ENG/DBG/STA/REC/DEL/QLF，
-附录 A/C，每类别独立 001 起编）、Priority 逐条字段化、outstanding 配置去重、How 下沉 Architecture。
-G1（architecture 0.4.0-draft，39 章模板完整完善）已就绪；**G2 源码已开发并 VCS 编译通过；G3 前置 smoke 自验证通过**
-（checker 检查 30 笔事务，违规 0）。可选文档（validation-plan/rtm/user-guide）与 examples/fault_injection/fusesoc/qualification 待建。
+`Developing`：**G0 PASS（1.0.0-g0-baseline）→ G1 PASS（0.4.0-draft 运行时模型冻结）→ G2 源码编译通过
+→ G3 Self-Verification 主体完成（2026-09-01）**：6 tier 回归全 PASS（smoke/feature/corner/negative/random/stress），
+修复 8 处 G2/G3 缺陷（slave memory 写路径、B/R join 死锁、clocking 握手错位、is_crossing_4kb、随机约束等）；
+negative/mutation 检测 5/5=100%。validation-plan 已按 G2/G3 blocker 评审意见修正并 Freeze；
+rtm.md / user-guide.md 已交付。剩余：12 条 RUL 专项负向注入、背压/延迟/交织路径、AW/W 解耦驱动形态、
+protocol_event 独立验证、RAL（G6 blocker）、FuseSoC/qualification（G5/G6）。
 
 ## 目录
 
@@ -51,19 +51,18 @@ vip/amba/axi4/
 
 | 交付物 | 路径 | 状态 |
 | --- | --- | --- |
-| 需求规格 | `docs/requirement.md` | ✅ G0（0.9.0-g0，Normalized） |
-| 架构与设计 | `docs/architecture.md` | ✅ G1（0.4.0-draft，39 章模板完整完善） |
-| 源代码 | `src/` | ✅ G2（VCS 编译 + 链接通过） |
-| 自验证 smoke | `self_test/` | ✅ smoke 通过（checker 30 笔/违规 0） |
-| 验证方案 | `docs/validation-plan.md` | ⬜ 待建 |
-| 追溯矩阵 | `docs/rtm.md` | ⬜ 待建 |
-| 用户指南 | `docs/user-guide.md` | ⬜ 待建 |
+| 需求规格 | `docs/requirement.md` | ✅ G0（1.0.0-g0-baseline） |
+| 架构与设计 | `docs/architecture.md` | ✅ G1（0.4.0-draft，运行时模型冻结） |
+| 源代码 | `src/` | ✅ G2（VCS 编译 + 全回归 6/6 PASS） |
+| 验证方案 | `docs/validation-plan.md` | ✅ Freeze（RUL mapping 校正 + G3~G6 分层） |
+| 自验证 | `self_test/` | ✅ 6 tier（smoke/feature/corner/negative/random/stress） |
+| 追溯矩阵 | `docs/rtm.md` | ✅ Draft（G3 首轮证据，诚实标注 NOT_RUN/PARTIAL） |
+| 用户指南 | `docs/user-guide.md` | ✅ Draft |
 | 示例 | `examples/` | ⬜ 待建 |
-| 测试用例 | `self_test/tests/` | ⬜ 待建 |
 | FuseSoC Core | `aixsilicon_vip_axi4_1.0.0.core` | ⬜ gen-core 生成 |
 | 元数据 | `metadata/vip.yaml` | ⬜ 待建 |
 | Qualification 证据 | `qualification/` | ⬜ 待建 |
-| CHANGELOG | `CHANGELOG.md` | ⬜ 待建 |
+| CHANGELOG | `CHANGELOG.md` | ✅（S07 记录） |
 
 ## 自验证运行
 

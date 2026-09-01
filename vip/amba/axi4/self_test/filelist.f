@@ -8,4 +8,9 @@
 ../src/axi4_pkg.sv
 tb/axi4_smoke_env.sv
 tb/axi4_smoke_test.sv
+tb/axi4_feature_test.sv
+tb/axi4_corner_test.sv
+tb/axi4_negative_test.sv
+tb/axi4_random_test.sv
+tb/axi4_stress_test.sv
 tb/axi4_smoke_tb.sv

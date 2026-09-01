@@ -80,17 +80,27 @@ class axi4_smoke_env extends uvm_env;
   function void connect_phase(uvm_phase phase);
     super.connect_phase(phase);
     // master monitor（完整事务）→ checker / coverage
+    // 请求级规则（RUL-003/PRO-010/PRO-012）仅接 master monitor 的 request 流
+    // （slave monitor 对同一事务重复报会导致违规重复计数）
+    // 响应级规则（RUL-010）接两侧 response 流
+    // 完整事务流 → checker.monitor_imp（RUL-007 响应拍数检查）
     if (checker != null) begin
       if (master_agent.read_monitor != null) begin
+        master_agent.read_monitor.request_item_port.connect(checker.request_imp);
+        master_agent.read_monitor.response_item_port.connect(checker.response_imp);
         master_agent.read_monitor.response_item_port.connect(checker.monitor_imp);
       end
       if (master_agent.write_monitor != null) begin
+        master_agent.write_monitor.request_item_port.connect(checker.request_imp);
+        master_agent.write_monitor.response_item_port.connect(checker.response_imp);
         master_agent.write_monitor.response_item_port.connect(checker.monitor_imp);
       end
       if (slave_agent.read_monitor != null) begin
+        slave_agent.read_monitor.response_item_port.connect(checker.response_imp);
         slave_agent.read_monitor.response_item_port.connect(checker.monitor_imp);
       end
       if (slave_agent.write_monitor != null) begin
+        slave_agent.write_monitor.response_item_port.connect(checker.response_imp);
         slave_agent.write_monitor.response_item_port.connect(checker.monitor_imp);
       end
     end

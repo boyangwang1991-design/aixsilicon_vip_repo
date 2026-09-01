@@ -264,3 +264,66 @@ requirement 推进至 **1.0.0-g0-baseline**（G0 PASS / Requirement Freeze）。
 ### 结论
 AXI4 运行经验已按 AGENT.md「skill-repo 优先 + 重新物化」原则回写：先改源仓再 `bootstrap.py --ensure`
 物化到 `.roo/skills/`，无直接编辑物化副本。后续 VIP（含 axi4 G1 冻结、其他协议 VIP）可直接复用。
+
+## 2026-09-01 — S07：G3 Self-Verification 主体完成（缺陷修复 8 处 + 6 tier 回归全绿 + 文档交付）
+
+### 目标
+按已 Freeze 的 validation-plan（RUL mapping 校正版）落地 G3：代码实现 → 验证 → 调试闭环，
+交付 rtm.md / user-guide.md，并推进到可提交状态。
+
+### 完成内容（代码修复 D1~D8）
+1. **D1 编译修复**（`src/agent/axi4_driver.sv`）：task 块内变量声明上移（VCS 不接受嵌套
+   block 声明）、`$display` 移出声明区、clocking block output 采样改为读接口顶层信号。
+2. **D2 slave 写路径缺失**：`drive_write_response` 此前只走 exclusive 分支，普通写从未
+   调用 `memory.write_beat` → 读回全 0；补齐逐 beat burst/WSTRB 写入 + 非 exclusive 写
+   清除独占标记（REQ-RUL-016）。
+3. **D3 join_any 死锁**：`receive_write/read_response` 在 `enable_timeout=0` 时 timeout
+   分支立即完成 → `join_any` 提前返回、B/R 响应丢失（burst_read size=0 的直接根因）；
+   改为 done 标志 + disable fork 同步收敛。
+4. **D4 clocking 握手错位**：master output #1 写 valid 后同沿即采样到 READY=1 并撤 valid，
+   slave（input #1step）永远采不到 → `drive_address` 前置 `@(vif.master_cb)` 同步。
+5. **D5 is_crossing_4kb 误报**：掩码错误依赖 burst_size 且比较逻辑混乱 → 改标准
+   page 比较（`(addr>>12) != (end>>12)`）。
+6. **D6 随机约束非法生成**：`axi4_master_write/read_seq` 允许 WRAP len∉{2,4,8,16}、
+   FIXED len>16、WRAP 地址不对齐 → 补全约束（random 45→0 违规）。
+7. **D7 4KB 约束公式漏检**：`(addr%size)+(len-1)*size<4096` 对 unaligned 起始不充分
+   （0x3ffe len7 size8 漏跨 0x4000）→ 改首末字节同 4KB page 判定（stress 165→0）。
+8. **D8 narrow 期望语义**：测试期望值未按 beat lane 位置摆放 → lane_shift 构造修正
+   （feature narrow 全 PASS）。
+
+### 新增测试（self_test/tb/）
+* `axi4_corner_test.sv`：VAL-005/006/008/009（4KB 合法边界 + 跨界负向、WRAP 回环、
+  unaligned lane、zero-strobe 不更新 memory）。
+* `axi4_negative_test.sv`：4 条非法事务 → checker 检出 4/4（PRO-010×2 + PRO-012×2 +
+  对照合法读 0 误报），mutation detection 100%。
+* `axi4_random_test.sv`（100 事务）/ `axi4_stress_test.sv`（300 事务）。
+* `axi4_smoke_env.sv`：checker request/response 流接通（负向检测前置条件）。
+* `Makefile`：6 tier 分层 + `ALLOW_ERRORS` 预期违规判定（corner=1、negative=4）。
+
+### 验证（VCS W-2024.09-SP1，UVM 1.2，seed=1）
+| Tier | Test | 结果 |
+| --- | --- | --- |
+| smoke | axi4_smoke_test | PASS（UVM_ERROR=0） |
+| feature | axi4_feature_test | PASS（含 narrow lane 闭环） |
+| corner | axi4_corner_test | PASS（RUL-003 负向 1/1 检出、无误报） |
+| negative | axi4_negative_test | PASS（4/4 检出，mutation 100%） |
+| random | axi4_random_test | PASS（100 事务 0 违规） |
+| stress | axi4_stress_test | PASS（300 事务 0 违规、无 leak/deadlock） |
+
+### 文档交付
+* `docs/validation-plan.md`：RUL-001~017 映射校正 + §13.4/13.5/13.6 + §52 G3~G6 分层（本轮 Freeze）。
+* `docs/rtm.md`：G3 首轮证据矩阵（诚实标注，禁止伪报）。
+* `docs/user-guide.md`：集成/配置/sequence/violation API/限制 首版。
+* `README.md` / `CHANGELOG.md`：状态与变更同步。
+
+### 剩余（G3→G4/G5 Gap，如实记录）
+* 12 条 RUL 专项负向注入（RUL-001/002/005/006/007/008/010/011~017）；
+* PRO-009/010/012 背压/延迟/交织路径接通与验证；
+* AW/W 解耦（PRO-019）、握手形态（PRO-020）驱动实现；
+* protocol_event 独立正确性（validation-plan §13.6）；
+* RAL（VER-014，G6 Release blocker）、FuseSoC/gen-core、metadata、coverage 闭合（G4）、
+  qualification 证据包（G5）。
+
+### 结论
+**G3 Self-Verification 主体达成（6/6 tier 全绿 + mutation 5/5=100%）**；未完成项 NOT_RUN
+如实登记于 rtm.md。可进入 G4 覆盖闭合阶段；G5 前须补齐上述 gap 或按 WAIVED 评审。

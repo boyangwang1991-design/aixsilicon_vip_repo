@@ -66,6 +66,10 @@ class axi4_master_driver extends uvm_driver #(axi4_master_item);
   endfunction
 
   protected task drive_address(axi4_master_item item);
+    // 先同步到 clocking 沿：确保 AW/AR valid（output #1）先写入接口，
+    // 下一沿 slave（input #1step）才能采样到；否则 master 在同沿采样到
+    // READY=1 立即完成握手并撤 valid，slave 因 skew 永远采不到（握手错位）。
+    @(vif.master_cb);
     vif.master_cb.awvalid <= 0;
     vif.master_cb.arvalid <= 0;
     // 请求开始延迟（REQ-050）
@@ -126,30 +130,38 @@ class axi4_master_driver extends uvm_driver #(axi4_master_item);
 
   protected task receive_write_response(axi4_master_item item);
     axi4_response resp[$];
+    bit           done_b;
     vif.master_cb.bready <= 1;
+    done_b = 0;
     fork
-      begin
-        forever begin
+      begin : b_rx
+        while (!done_b) begin
           @(vif.master_cb);
           if (vif.master_cb.bvalid === 1'b1) begin
             resp.push_back(vif.master_cb.bresp);
             if (vif.master_cb.bid == item.id) begin
-              break;
+              done_b = 1;
             end
           end
         end
       end
-      begin
+      begin : b_to
+        // 修复：enable_timeout=0 时本分支不得立即完成（否则 join_any 提前返回、
+        // B 响应未等到、resp.size()==0）。禁用超时则与接收分支同步等待。
         if (cfg.enable_timeout) begin
           repeat (cfg.timeout_cycles) @(vif.master_cb);
-          if (resp.size() == 0) begin
+          if (!done_b) begin
             `uvm_error(get_type_name(), $sformatf("B 响应超时 (id=%0d)", item.id))
             if (status != null) status.incr_timeout();
+            done_b = 1;
           end
-          disable fork;
+        end
+        else begin
+          while (!done_b) @(vif.master_cb);
         end
       end
     join_any
+    disable fork;
     item.response = new[resp.size()];
     foreach (resp[i]) item.response[i] = resp[i];
     item.has_response = 1;
@@ -161,9 +173,9 @@ class axi4_master_driver extends uvm_driver #(axi4_master_item);
     axi4_data     rdata[$];
     bit           done;
     vif.master_cb.rready <= 1;
+    done = 0;
     fork
-      begin
-        done = 0;
+      begin : r_rx
         while (!done) begin
           @(vif.master_cb);
           if (vif.master_cb.rvalid === 1'b1) begin
@@ -175,17 +187,23 @@ class axi4_master_driver extends uvm_driver #(axi4_master_item);
           end
         end
       end
-      begin
+      begin : r_to
+        // 修复：enable_timeout=0 时本分支不得立即完成（否则 join_any 提前返回、
+        // R 响应未等到、rdata.size()==0）。禁用超时则与接收分支同步等待。
         if (cfg.enable_timeout) begin
           repeat (cfg.timeout_cycles) @(vif.master_cb);
           if (!done) begin
             `uvm_error(get_type_name(), $sformatf("R 响应超时 (id=%0d)", item.id))
             if (status != null) status.incr_timeout();
+            done = 1;
           end
-          disable fork;
+        end
+        else begin
+          while (!done) @(vif.master_cb);
         end
       end
     join_any
+    disable fork;
     item.response = new[resp.size()];
     item.data     = new[rdata.size()];
     foreach (resp[i])  item.response[i] = resp[i];
@@ -266,14 +284,15 @@ class axi4_slave_driver extends uvm_driver #(axi4_slave_item);
     axi4_data data[$];
     axi4_strobe strobe[$];
     bit done;
+    axi4_item req;
 
     store = new;
     done = 0;
     while (!done) begin
       @(vif.slave_cb);
       if (vif.slave_cb.awvalid === 1'b1) begin
-        // 采样 AW
-        axi4_item req = axi4_item::type_id::create("req");
+        // 采样 AW（req 在 task 顶部声明，避免 VCS 嵌套 block 声明解析问题）
+        req = axi4_item::type_id::create("req");
         req.access_type = AXI4_WRITE_ACCESS;
         req.id           = vif.slave_cb.awid;
         req.address      = vif.slave_cb.awaddr;
@@ -308,10 +327,11 @@ class axi4_slave_driver extends uvm_driver #(axi4_slave_item);
 
   // 等待读请求（AR）
   protected task wait_for_read_request(ref axi4_item item);
+    axi4_item req;
     forever begin
       @(vif.slave_cb);
       if (vif.slave_cb.arvalid === 1'b1) begin
-        axi4_item req = axi4_item::type_id::create("req");
+        req = axi4_item::type_id::create("req");
         req.access_type = AXI4_READ_ACCESS;
         req.id           = vif.slave_cb.arid;
         req.address      = vif.slave_cb.araddr;
@@ -332,10 +352,30 @@ class axi4_slave_driver extends uvm_driver #(axi4_slave_item);
   // 写响应：B 通道
   protected task drive_write_response(axi4_item item, axi4_response resp_status);
     axi4_response final_resp;
+    bit          do_write = 1;
     final_resp = resp_status;
-    // exclusive 写：若 memory 支持，返回 EXOKAY（REQ-0115）
-    if ((item.lock == AXI4_EXCLUSIVE_LOCK) && (memory != null)) begin
-      final_resp = memory.exclusive_write(item.address);
+    // 写路径核心：把 W 数据按 burst/WSTRB 写入 memory（REQ-0102/0111）。
+    // 此前仅 exclusive 时调用 exclusive_write，普通写从未更新 memory → 读回全 0。
+    if (memory != null) begin
+      // exclusive 写：先判定独占状态（EXOKAY 才允许写数据）
+      if (item.lock == AXI4_EXCLUSIVE_LOCK) begin
+        final_resp = memory.exclusive_write(item.address);
+        do_write   = (final_resp == AXI4_EXOKAY);
+      end
+      if (do_write) begin
+        for (int i = 0; i < item.burst_length; i++) begin
+          axi4_address beat_addr = axi4_types_pkg::get_beat_address(
+            item.address, i, item.burst_type, item.burst_length, item.burst_size
+          );
+          axi4_data   beat_data = (i < item.data.size())   ? item.data[i]   : '0;
+          axi4_strobe beat_stb  = (i < item.strobe.size()) ? item.strobe[i] : '1;
+          memory.write_beat(beat_addr, item.burst_size, cfg.data_width / 8, beat_data, beat_stb);
+        end
+        // 非 exclusive 写使独占标记失效（REQ-RUL-016）
+        if (item.lock != AXI4_EXCLUSIVE_LOCK) begin
+          memory.clear_exclusive(item.address);
+        end
+      end
     end
     repeat (cfg.response_start_delay.get_delay()) @(vif.slave_cb);
     vif.slave_cb.bvalid <= 1;
@@ -349,8 +389,15 @@ class axi4_slave_driver extends uvm_driver #(axi4_slave_item);
   protected task drive_read_response(axi4_item item, axi4_response resp_status);
     axi4_data rdata[];
     if (memory != null) begin
-      memory.read_burst(item.address, item.burst_length, item.burst_size,
-                        cfg.data_width / 8, rdata);
+      rdata = new[item.burst_length];
+      // 逐 beat 按 burst_type 计算地址读取（INCR/WRAP/FIXED 均正确；
+      // 原 read_burst 硬编码 INCR，WRAP/FIXED 读会错）
+      for (int i = 0; i < item.burst_length; i++) begin
+        axi4_address beat_addr = axi4_types_pkg::get_beat_address(
+          item.address, i, item.burst_type, item.burst_length, item.burst_size
+        );
+        rdata[i] = memory.read_beat(beat_addr, item.burst_size, cfg.data_width / 8);
+      end
       // exclusive 读：注册独占标记（REQ-0103）
       if (item.lock == AXI4_EXCLUSIVE_LOCK) begin
         memory.exclusive_read(item.address);

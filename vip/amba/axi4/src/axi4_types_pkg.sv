@@ -223,12 +223,12 @@ package axi4_types_pkg;
   endfunction
 
   // 判断一笔 burst（起始地址+长度+size）是否跨越 4KB 边界
+  // 标准语义：首字节与末字节不在同一 4KB page（addr>>12 不同）即跨界。
+  // 掩码与 burst_size 无关（原实现错误地按 size 取掩码，导致单拍事务误报）。
   function automatic bit is_crossing_4kb(axi4_address address, int burst_length, int burst_size);
-    axi4_address start_align;
     axi4_address end_addr;
-    start_align = address & get_4kb_boundary_mask(burst_size);
-    end_addr    = address + (burst_length - 1) * burst_size;
-    return (end_addr & ~get_4kb_boundary_mask(burst_size)) != (start_align & get_4kb_boundary_mask(burst_size));
+    end_addr = address + (burst_length - 1) * burst_size;
+    return ((address >> 12) != (end_addr >> 12));
   endfunction
 
   // 计算第 index 个 beat 的实际字节地址（考虑 WRAP/INCR/FIXED 与 narrow/unaligned）

@@ -108,15 +108,31 @@ class axi4_master_write_seq extends axi4_master_base_seq;
   rand axi4_lock_type  lock;
 
   constraint c_write_legal {
-    burst_length inside {[1:16]};
     burst_size inside {1, 2, 4, 8, 16, 32};
+    burst_type inside {AXI4_FIXED_BURST, AXI4_INCREMENTING_BURST, AXI4_WRAPPING_BURST};
     data.size()   == burst_length;
     strobe.size() == burst_length;
     soft lock     == AXI4_NORMAL_LOCK;
-    // 不跨 4KB
+    // 突发长度合法性（REQ-PRO-004 / PRO-010）：
+    //   INCR 1~256（此处上限 16）、FIXED 1~16、WRAP ∈{2,4,8,16}
+    if (burst_type == AXI4_FIXED_BURST) {
+      burst_length inside {[1:16]};
+    }
+    else if (burst_type == AXI4_WRAPPING_BURST) {
+      burst_length inside {2, 4, 8, 16};
+    }
+    else {
+      burst_length inside {[1:16]};
+    }
+    // 不跨 4KB（首末字节同一 4KB page；原公式对 unaligned 起始不充分）
     solve address before burst_size;
     solve burst_size before burst_length;
-    (address % burst_size) + (burst_length - 1) * burst_size < 4096;
+    ((address & 32'h0000_F000) ==
+     ((address + (burst_length - 1) * burst_size) & 32'h0000_F000));
+    // WRAP 起始地址对齐 wrap boundary（REQ-PRO-012）
+    if (burst_type == AXI4_WRAPPING_BURST) {
+      (address % (burst_size * burst_length)) == 0;
+    }
   }
 
   `uvm_object_utils(axi4_master_write_seq)
@@ -158,12 +174,28 @@ class axi4_master_read_seq extends axi4_master_base_seq;
   rand axi4_lock_type  lock;
 
   constraint c_read_legal {
-    burst_length inside {[1:16]};
     burst_size inside {1, 2, 4, 8, 16, 32};
+    burst_type inside {AXI4_FIXED_BURST, AXI4_INCREMENTING_BURST, AXI4_WRAPPING_BURST};
     soft lock == AXI4_NORMAL_LOCK;
+    // 突发长度合法性（同 write：INCR 1~256、FIXED 1~16、WRAP ∈{2,4,8,16}）
+    if (burst_type == AXI4_FIXED_BURST) {
+      burst_length inside {[1:16]};
+    }
+    else if (burst_type == AXI4_WRAPPING_BURST) {
+      burst_length inside {2, 4, 8, 16};
+    }
+    else {
+      burst_length inside {[1:16]};
+    }
     solve address before burst_size;
     solve burst_size before burst_length;
-    (address % burst_size) + (burst_length - 1) * burst_size < 4096;
+    // 不跨 4KB（首末字节同一 4KB page）
+    ((address & 32'h0000_F000) ==
+     ((address + (burst_length - 1) * burst_size) & 32'h0000_F000));
+    // WRAP 起始地址对齐 wrap boundary（REQ-PRO-012）
+    if (burst_type == AXI4_WRAPPING_BURST) {
+      (address % (burst_size * burst_length)) == 0;
+    }
   }
 
   `uvm_object_utils(axi4_master_read_seq)
