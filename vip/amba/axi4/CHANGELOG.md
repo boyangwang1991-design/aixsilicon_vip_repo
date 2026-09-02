@@ -3,9 +3,32 @@
 所有显著变更记录于此。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本遵循 SemVer。
 
-## [Unreleased] — 1.0.0（developing，G3 主体完成）
+## [Unreleased] — 1.0.0（developing，G3 主体完成 + L1 Unit Test 层）
 
-### Added（本轮 2026-09-01 S07）
+### Added（2026-09-02 S08）
+
+* **Unit Test 层（L1）**：`unit_test/`（runner 断言 + semantic/memory/transaction 三组
+  golden vectors + `make unit`）；**79/79 PASS**；机制同步固化到 vip-development-suite
+  skill（vip-test/主 SKILL/模板 validation-plan L0~L7 重排/模板 README），G2 门禁升级为
+  `compile + unit PASS`。
+* **VIP 本体补齐（按 requirement/architecture）**：
+  slave 背压（PRO-009 `backpressure_proc`）、response policy 子集（PRO-010/RUL-010
+  `pick_response_status` 权重选择）、master 注入钩子（RUL-005/011/017：
+  early/missing WLAST、stalled payload 翻转）、outstanding 写异步化（PRO-007，
+  B 响应后台 FIFO 线程）、RAL adapter/predictor（VER-014，UVM 1.2 适配）、
+  SVA `a_wdata/a_wstrb_stable`（RUL-011）、checker RUL-017 写侧拍数对账。
+* **error tier**：`axi4_error_test`（E1~E4 时序注入/背压/SLVERR；`make error`，
+  当前检出 0/2 → NOT_RUN 如实标注，full 摘除待 G4 调试）。
+
+### Fixed（2026-09-02 S08）
+
+* **axi4_memory unaligned lane 缺陷（unit test 抓出）**：`read_beat/write_beat` 的
+  `abs_addr` 应为对齐基址+global_byte（原 beat_addr+b 导致 lane2/3 写到错误地址；
+  读写对称错误使回环测试无法暴露——unit 层拦截的直接证据）。
+* **injector ILLEGAL_WSTRB**：改为置位越界 lane（原全 0 是合法 zero-strobe）。
+* UVM 1.2 API 适配（uvm_reg_bus_op 无 byte_enable、get_reg_by_offset 路径）。
+
+### Added（2026-09-01 S07）
 
 * `docs/validation-plan.md`：按评审 8 点修正后 Freeze——RUL-001~017 负向映射与
   requirement 严格对齐；新增 §13.4/13.5 Write/Read Association 一等验证、§13.6

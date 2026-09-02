@@ -13,4 +13,5 @@ tb/axi4_corner_test.sv
 tb/axi4_negative_test.sv
 tb/axi4_random_test.sv
 tb/axi4_stress_test.sv
+tb/axi4_error_test.sv
 tb/axi4_smoke_tb.sv

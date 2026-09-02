@@ -237,6 +237,13 @@ class axi4_checker extends uvm_scoreboard;
         end
       end
     end
+
+    // ---- AXI4-REQ-RUL-017：burst 完整性（写侧 W beat 数 == awlen+1）----
+    // early-WLAST/缩短注入后 slave 强制完成 B，monitor 重建的 data.size()
+    // 反映实际 W 拍数；与 burst_length 不一致即缩短违规。
+    if (item.is_write() && (item.data.size() > 0) && (item.data.size() != item.burst_length)) begin
+      report_violation("AXI4-REQ-RUL-017", "写事务 W beat 数与突发长度不一致（burst 缩短）", "ERROR", "W", item);
+    end
   endfunction
 
   // ===========================================================================

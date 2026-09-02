@@ -18,10 +18,23 @@ class axi4_master_driver extends uvm_driver #(axi4_master_item);
   axi4_configuration cfg;
   axi4_status        status;
 
+  // ===========================================================================
+  // 注入钩子（RUL-005/011/017 负向能力；默认关闭，由 negative test 置位）
+  //   inject_early_wlast     : 最后第 2 拍就拉 WLAST（burst 缩短 → RUL-017/SVA）
+  //   inject_missing_wlast   : 末拍不拉 WLAST（RUL-005/SVA）
+  //   inject_unstable_payload: W 数据在等待 READY 期间翻转（RUL-011/SVA）
+  // ===========================================================================
+  bit inject_early_wlast;
+  bit inject_missing_wlast;
+  bit inject_unstable_payload;
+
   `uvm_component_utils(axi4_master_driver)
 
   function new(string name = "axi4_master_driver", uvm_component parent = null);
     super.new(name, parent);
+    inject_early_wlast      = 0;
+    inject_missing_wlast    = 0;
+    inject_unstable_payload = 0;
   endfunction
 
   function void build_phase(uvm_phase phase);
@@ -119,8 +132,37 @@ class axi4_master_driver extends uvm_driver #(axi4_master_item);
         vif.master_cb.wvalid <= 1;
         vif.master_cb.wdata  <= (i < item.data.size())   ? item.data[i]   : '0;
         vif.master_cb.wstrb  <= (i < item.strobe.size()) ? item.strobe[i] : '1;
-        vif.master_cb.wlast  <= (i == item.burst_length - 1);
+        // WLAST 判定（注入钩子，默认合法：仅末拍拉 WLAST）
+        if (inject_early_wlast && (i == item.burst_length - 2)) begin
+          // RUL-017/RUL-005 负向：倒数第 2 拍提前拉 WLAST 并终止 burst（缩短）
+          vif.master_cb.wlast <= 1;
+          do @(vif.master_cb); while (!(vif.master_cb.wready === 1'b1));
+          vif.master_cb.wvalid <= 0;
+          vif.master_cb.wlast  <= 0;
+          item.end_write_data();
+          return;
+        end
+        else if (inject_missing_wlast && (i == item.burst_length - 1)) begin
+          // RUL-005 负向：末拍缺失 WLAST
+          vif.master_cb.wlast <= 0;
+        end
+        else begin
+          vif.master_cb.wlast <= (i == item.burst_length - 1);
+        end
+        // RUL-011 负向：等待 READY 期间翻转 payload（stall 后 wdata/wstrb 变化）
+        if (inject_unstable_payload) begin
+          fork
+            begin
+              @(vif.master_cb);
+              if (!(vif.master_cb.wready === 1'b1)) begin
+                vif.master_cb.wdata <= ~item.data[i];
+                vif.master_cb.wstrb <= ~item.strobe[i];
+              end
+            end
+          join_none
+        end
         do @(vif.master_cb); while (!(vif.master_cb.wready === 1'b1));
+        disable fork;
       end
       vif.master_cb.wvalid <= 0;
       vif.master_cb.wlast  <= 0;
@@ -212,22 +254,64 @@ class axi4_master_driver extends uvm_driver #(axi4_master_item);
     item.end_response();
   endtask
 
+  // ===========================================================================
+  // 写响应后台线程（PRO-007 outstanding 写）：按 FIFO 顺序收取 B 并配对队头。
+  // 主线程发完 AW+W 即 item_done → 多笔写可同时在途（B 延迟不阻塞新写）。
+  // ===========================================================================
+  protected axi4_master_item outstanding_wr[$];
+
+  protected task write_response_thread();
+    axi4_master_item wr;
+    axi4_response resp[$];
+    bit done_b;
+    forever begin
+      if (outstanding_wr.size() == 0) begin
+        @(vif.master_cb);
+        continue;
+      end
+      wr = outstanding_wr[0];
+      resp.delete();
+      done_b = 0;
+      while (!done_b) begin
+        @(vif.master_cb);
+        if (vif.master_cb.bvalid === 1'b1) begin
+          resp.push_back(vif.master_cb.bresp);
+          if (vif.master_cb.bid == wr.id) begin
+            done_b = 1;
+          end
+        end
+      end
+      wr.response    = new[resp.size()];
+      foreach (resp[i]) wr.response[i] = resp[i];
+      wr.has_response = 1;
+      wr.end_response();
+      void'(outstanding_wr.pop_front());
+    end
+  endtask
+
   virtual task run_phase(uvm_phase phase);
     // 复位期间保持 VALID=0，等待复位释放后再驱动（REQ-018）
     reset_signals();
     @(posedge vif.aclk iff (vif.areset_n === 1'b1));
+    fork
+      write_response_thread();
+    join_none
     forever begin
       axi4_master_item item;
       seq_item_port.get_next_item(item);
       drive_address(item);
       if (item.is_write()) begin
         drive_write_data(item);
-        receive_write_response(item);
+        // 写：请求阶段完成即 item_done，B 由后台线程收取（outstanding 并发）
+        outstanding_wr.push_back(item);
+        item.has_response = 0;
+        seq_item_port.item_done();
       end
       else begin
+        // 读：同步收取 R（sequence 依赖 rdata）
         receive_read_response(item);
+        seq_item_port.item_done();
       end
-      seq_item_port.item_done();
     end
   endtask
 
@@ -277,6 +361,54 @@ class axi4_slave_driver extends uvm_driver #(axi4_slave_item);
     vif.slave_cb.rlast   <= 0;
   endfunction
 
+  // ===========================================================================
+  // 背压（PRO-009）：按 ready_delay 配置周期性拉低 READY（请求通道背压）
+  // 全部未启用时不启动（默认合法路径不受影响）
+  // ===========================================================================
+  protected task backpressure_proc();
+    if (!cfg.awready_delay.enabled && !cfg.wready_delay.enabled &&
+        !cfg.arready_delay.enabled) begin
+      return;
+    end
+    fork
+      forever begin
+        if (cfg.awready_delay.enabled) begin
+          repeat (cfg.awready_delay.get_delay()) vif.slave_cb.awready <= 0;
+          vif.slave_cb.awready <= 1;
+        end
+        if (cfg.wready_delay.enabled) begin
+          repeat (cfg.wready_delay.get_delay()) vif.slave_cb.wready <= 0;
+          vif.slave_cb.wready <= 1;
+        end
+        if (cfg.arready_delay.enabled) begin
+          repeat (cfg.arready_delay.get_delay()) vif.slave_cb.arready <= 0;
+          vif.slave_cb.arready <= 1;
+        end
+        @(vif.slave_cb);
+      end
+    join_none
+  endtask
+
+  // ===========================================================================
+  // 响应状态选择（response policy 子集：PRO-010 / RUL-010 注入钩子）
+  // 按 response_weight_* 加权；默认全 OKAY（合法回归不受影响）
+  // ===========================================================================
+  protected function axi4_response pick_response_status();
+    int total, pick;
+    total = cfg.response_weight_okay + cfg.response_weight_exokay +
+            cfg.response_weight_slave_error + cfg.response_weight_decode_error;
+    if (total <= 0) begin
+      return AXI4_OKAY;
+    end
+    pick = $urandom_range(0, total - 1);
+    if (pick < cfg.response_weight_okay) return AXI4_OKAY;
+    pick -= cfg.response_weight_okay;
+    if (pick < cfg.response_weight_exokay) return AXI4_EXOKAY;
+    pick -= cfg.response_weight_exokay;
+    if (pick < cfg.response_weight_slave_error) return AXI4_SLAVE_ERROR;
+    return AXI4_DECODE_ERROR;
+  endfunction
+
   // 等待写事务完整到达（AW + 全部 W 数据）
   protected task wait_for_write_request(ref axi4_item item);
     axi4_payload_store store;
@@ -307,12 +439,23 @@ class axi4_slave_driver extends uvm_driver #(axi4_slave_item);
         req.data         = new[0];
         req.strobe       = new[0];
         item = req;
-        // 采样全部 W 数据
-        while (data.size() < item.burst_length) begin
-          @(vif.slave_cb);
-          if (vif.slave_cb.wvalid === 1'b1) begin
-            data.push_back(vif.slave_cb.wdata);
-            strobe.push_back(vif.slave_cb.wstrb);
+        // 采样全部 W 数据；W 停发 16 拍 → 强制完成（缩短容错，
+        // monitor 重建拍数与 awlen 不一致 → checker RUL-007 检出）
+        begin
+          int stall_cnt;
+          stall_cnt = 0;
+          while (data.size() < item.burst_length) begin
+            @(vif.slave_cb);
+            if (vif.slave_cb.wvalid === 1'b1) begin
+              data.push_back(vif.slave_cb.wdata);
+              strobe.push_back(vif.slave_cb.wstrb);
+            end
+            else begin
+              stall_cnt++;
+              if (stall_cnt > 16) begin
+                break;
+              end
+            end
           end
         end
         item.data   = new[data.size()];
@@ -421,20 +564,21 @@ class axi4_slave_driver extends uvm_driver #(axi4_slave_item);
     axi4_response resp_status;
     reset_signals();
     @(posedge vif.aclk iff (vif.areset_n === 1'b1));
+    backpressure_proc();
     fork
-      // 写路径：等 AW + W，发 B
+      // 写路径：等 AW + W，发 B（resp status 按 policy 权重选择）
       begin
         forever begin
           wait_for_write_request(item);
-          resp_status = AXI4_OKAY;
+          resp_status = pick_response_status();
           drive_write_response(item, resp_status);
         end
       end
-      // 读路径：等 AR，发 R
+      // 读路径：等 AR，发 R（resp status 按 policy 权重选择）
       begin
         forever begin
           wait_for_read_request(item);
-          resp_status = AXI4_OKAY;
+          resp_status = pick_response_status();
           drive_read_response(item, resp_status);
         end
       end

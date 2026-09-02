@@ -87,6 +87,8 @@ module axi4_smoke_tb;
     .wvalid   (vif.wvalid),
     .wready   (vif.wready),
     .wlast    (vif.wlast),
+    .wdata    (vif.wdata),
+    .wstrb    (vif.wstrb),
     .bvalid   (vif.bvalid),
     .bready   (vif.bready),
     .arvalid  (vif.arvalid),

@@ -26,6 +26,8 @@ module axi4_assertions #(
   input logic wvalid,
   input logic wready,
   input logic wlast,
+  input logic [DATA_WIDTH-1:0] wdata,
+  input logic [DATA_WIDTH/8-1:0] wstrb,
   // 写响应通道
   input logic bvalid,
   input logic bready,
@@ -161,6 +163,21 @@ module axi4_assertions #(
   endproperty
   a_arlen_stable: assert property (p_arlen_stable)
     else `uvm_error("AXI4-REQ-RUL-002", "ARLEN 在未握手时变化");
+
+  // RUL-011：W 通道 payload stability（wvalid && !wready 期间 wdata/wstrb 保持）
+  property p_wdata_stable;
+    @(posedge aclk) disable iff (!areset_n)
+    (wvalid && !wready) |=> (wdata == $past(wdata));
+  endproperty
+  a_wdata_stable: assert property (p_wdata_stable)
+    else `uvm_error("AXI4-REQ-RUL-011", "W 数据在 stalled 期间变化");
+
+  property p_wstrb_stable;
+    @(posedge aclk) disable iff (!areset_n)
+    (wvalid && !wready) |=> (wstrb == $past(wstrb));
+  endproperty
+  a_wstrb_stable: assert property (p_wstrb_stable)
+    else `uvm_error("AXI4-REQ-RUL-011", "WSTRB 在 stalled 期间变化");
 
   // ---------------------------------------------------------------------------
   // AXI4-REQ-RUL-009：复位行为（复位释放后信号不得为 X / 握手正常）

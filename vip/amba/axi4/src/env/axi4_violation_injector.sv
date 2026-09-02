@@ -84,9 +84,14 @@ class axi4_violation_injector extends uvm_component;
         item.burst_length = 3;
       end
       AXI4_INJ_ILLEGAL_WSTRB: begin
-        // WSTRB 越界（全 0 且 burst_size>1）
-        foreach (item.strobe[i]) begin
-          item.strobe[i] = '0;
+        // RUL-013 负向：WSTRB 置位超出当前 transfer 覆盖 lane
+        // （原实现全置 0 是合法 zero-strobe，造不成违规）
+        // 越界位 = 全宽 mask 减去 beat 覆盖 mask，置 1
+        begin
+          int beat_mask = (16'h0001 << item.burst_size) - 1;
+          foreach (item.strobe[i]) begin
+            item.strobe[i] = item.strobe[i] | ~beat_mask;
+          end
         end
       end
       AXI4_INJ_CROSS_4KB: begin

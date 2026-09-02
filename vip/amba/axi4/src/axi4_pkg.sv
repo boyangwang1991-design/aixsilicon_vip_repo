@@ -53,6 +53,11 @@ package axi4_pkg;
   `include "coverage/axi4_coverage.sv"
   `include "env/axi4_env.sv"
 
+  // =============================================================================
+  // RAL Integration（REQ-VER-014：adapter + predictor，architecture §23）
+  // =============================================================================
+  `include "ral/axi4_ral_adapter.sv"
+
 endpackage : axi4_pkg
 
 `endif // AXI4_PKG__SV

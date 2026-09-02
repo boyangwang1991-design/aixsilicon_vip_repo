@@ -97,15 +97,19 @@ class axi4_memory extends uvm_object;
     end
   endfunction
 
-  // 读取单个 beat：从 beat_addr 读取 burst_size 字节（对齐到总线位置）
+  // 读取单个 beat：从 beat_addr 读取 burst_size 字节（对齐到总线 lane 位置）
+  // abs_addr = (beat_addr 对齐到总线宽) + global_byte —— unaligned beat 的
+  // lane2/3 字节位于对齐基址+2/3，而非 beat_addr+2/3（unit test 抓出的缺陷）
   function axi4_data read_beat(axi4_address beat_addr, int burst_size, int data_bytes);
     axi4_data data = '0;
     int lane_shift = get_byte_lane_index(beat_addr, data_bytes);
+    axi4_address base_addr = (beat_addr / data_bytes) * data_bytes;
     for (int b = 0; b < burst_size; b++) begin
-      if ((lane_shift + b) < data_bytes) begin
-        axi4_address abs_addr = beat_addr + b;
+      int global_byte = lane_shift + b;
+      if (global_byte < data_bytes) begin
+        axi4_address abs_addr = base_addr + global_byte;
         if (abs_addr < memory_size) begin
-          data[(lane_shift + b)*8 +: 8] = memory[abs_addr];
+          data[global_byte*8 +: 8] = memory[abs_addr];
         end
       end
     end
@@ -113,6 +117,7 @@ class axi4_memory extends uvm_object;
   endfunction
 
   // 写入单个 beat：仅更新 WSTRB=1 的 byte（REQ-0102/0111）
+  // abs_addr 与 read_beat 同一公式（lane 语义对称，unit test 防回归）
   function void write_beat(
     axi4_address beat_addr,
     int          burst_size,
@@ -121,10 +126,11 @@ class axi4_memory extends uvm_object;
     axi4_strobe  strobe
   );
     int lane_shift = get_byte_lane_index(beat_addr, data_bytes);
+    axi4_address base_addr = (beat_addr / data_bytes) * data_bytes;
     for (int b = 0; b < burst_size; b++) begin
       int global_byte = lane_shift + b;
       if ((global_byte < data_bytes) && (strobe[global_byte])) begin
-        axi4_address abs_addr = beat_addr + b;
+        axi4_address abs_addr = base_addr + global_byte;
         if (abs_addr < memory_size) begin
           memory[abs_addr] = data[global_byte*8 +: 8];
         end

@@ -2,6 +2,7 @@
 # axi4 VIP Self Test Makefile（编译 + 仿真 + 回归 Toolkit）
 #
 # 目标：
+#   unit         L1 Unit Test（semantic/memory/transaction/config/policy golden vectors）
 #   compile      编译 VIP 库与 self-test 环境（生成可执行）
 #   smoke        最小正向事务（smoke tier）
 #   feature      全 feature 测试（feature tier）
@@ -37,9 +38,29 @@ TOP       := axi4_smoke_tb
 # ---- 工具 ----
 PY        ?= uv run python
 
-.PHONY: all compile smoke feature corner negative random stress regression full cov clean
+.PHONY: all unit compile smoke feature corner negative random stress regression full cov clean
 
-all: compile
+all: unit compile
+
+# =============================================================================
+# L1 Unit Test（G2 门禁一部分：compile + unit PASS；无 UVM 启动、golden vector）
+# 全部路径相对本 Makefile 解析（子 shell 内 cd unit_test 只影响 incdir 基准）
+# =============================================================================
+unit:
+	@echo "=== RUN axi4 L1 unit test (semantic/memory/transaction) ==="
+	mkdir -p $(SIM_DIR)/unit $(LOG_DIR)
+	cd ../unit_test && vcs -sverilog -full64 -timescale=1ns/1ps -ntb_opts uvm-1.2 \
+		+incdir+../src +incdir+../src/transaction \
+		+incdir+../src/agent +incdir+../src/sequences \
+		+incdir+../src/coverage +incdir+../src/checker \
+		+incdir+../src/env \
+		-f filelist.f -o ../self_test/$(SIM_DIR)/unit/simv > ../self_test/$(LOG_DIR)/unit_compile.log 2>&1 || \
+		( cat ../self_test/$(LOG_DIR)/unit_compile.log; exit 1 )
+	$(SIM_DIR)/unit/simv -l $(LOG_DIR)/unit_test.log > /dev/null 2>&1 || true
+	@grep -q "UNIT_TEST_PASS" $(LOG_DIR)/unit_test.log && \
+		grep -E "UNIT_TEST_SUMMARY" $(LOG_DIR)/unit_test.log || \
+		( echo "FAIL: unit_test（见 $(LOG_DIR)/unit_test.log）"; grep "FAILED:" $(LOG_DIR)/unit_test.log; exit 1 )
+	@echo "PASS: unit_test"
 
 # =============================================================================
 # 编译
@@ -95,8 +116,16 @@ stress: compile
 	@echo "=== RUN axi4 stress ==="
 	$(MAKE) _sim_run UVM_TESTNAME=axi4_stress_test ALLOW_ERRORS=0
 
+# error tier：时序注入（early-WLAST/unstable payload）→ UVM_ERROR 为预期检出，
+# 阈值判定（MIN_ERRORS）：实际检出数 ≥ MIN_ERRORS 且 test 内 report_phase 校验无超限
+error: compile
+	@echo "=== RUN axi4 error (timing injection) ==="
+	$(MAKE) _sim_run_min UVM_TESTNAME=axi4_error_test MIN_ERRORS=2
+
 regression: full
 
+# full = 6 tier 稳定回归；error tier（RUL-017 monitor 对账）调试中，独立 target：
+#   make -C self_test error   # NOT_RUN 状态：检出路径待 monitor 重建调试（run_log S08）
 full: compile
 	@echo "=== RUN axi4 full regression (6 tests) ==="
 	$(MAKE) _sim_run UVM_TESTNAME=axi4_smoke_test ALLOW_ERRORS=0
@@ -120,6 +149,19 @@ _sim_run:
 		exit 1; \
 	fi; \
 	echo "PASS: $(UVM_TESTNAME) (UVM_ERROR=$$errs == expected=$(ALLOW_ERRORS))"
+
+# 阈值判定入口（error tier：时序注入检出数 ≥ MIN_ERRORS 即 PASS；精确上限由测试内 report_phase 校验）
+_sim_run_min:
+	mkdir -p $(LOG_DIR)
+	$(SIM_DIR)/simv +UVM_TESTNAME=$(UVM_TESTNAME) \
+		-l $(LOG_DIR)/$(UVM_TESTNAME).log +ntb_random_seed=1
+	@errs=$$(grep -oE "UVM_ERROR : *[0-9]+" $(LOG_DIR)/$(UVM_TESTNAME).log | grep -oE "[0-9]+" | tail -1); \
+	fatals=$$(grep -oE "UVM_FATAL : *[0-9]+" $(LOG_DIR)/$(UVM_TESTNAME).log | grep -oE "[0-9]+" | tail -1); \
+	if [ "$$fatals" != "0" ] || [ "$$errs" -lt "$(MIN_ERRORS)" ]; then \
+		echo "FAIL: $(UVM_TESTNAME) (UVM_ERROR=$$errs < MIN=$(MIN_ERRORS) UVM_FATAL=$$fatals, 详见 $(LOG_DIR)/$(UVM_TESTNAME).log)"; \
+		exit 1; \
+	fi; \
+	echo "PASS: $(UVM_TESTNAME) (UVM_ERROR=$$errs >= MIN=$(MIN_ERRORS))"
 
 # =============================================================================
 # 覆盖率
