@@ -18,4 +18,5 @@ tb/axi4_concurrent_test.sv
 tb/axi4_ral_test.sv
 tb/axi4_rul_test.sv
 tb/axi4_passive_test.sv
+tb/axi4_cov_sweep_test.sv
 tb/axi4_smoke_tb.sv

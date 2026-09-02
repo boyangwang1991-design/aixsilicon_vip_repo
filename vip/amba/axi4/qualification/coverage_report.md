@@ -4,7 +4,24 @@
 > vdb 保留于 `self_test/build/cov/axi4_cov_*.vdb`；urg merge 需 license，G4 复跑）。
 > 功能覆盖百分比来自 `axi4_coverage` report（covergroup get_coverage()，0-100）。
 
-## 各 covergroup 覆盖率（stress tier，最高基线；S16 实测）
+## 各 covergroup 覆盖率（S16 stress 基线 → S17 cov_sweep 后）
+
+| covergroup | S16 基线 | **S17 sweep 后** | 变化 |
+| --- | --- | --- | --- |
+| cg_scenario | 100% | **100%** | 保持 |
+| cg_access_type | 50% | **100%** | ✅ S4 读均衡 |
+| cg_strobe | 0% | **100%** | ✅ S1 十种 shape |
+| cg_exclusive | 50% | **100%** | ✅ S2 exclusive 对 |
+| cg_boundary | 50% | **100%** | ✅ S5 4KB cross |
+| cg_burst | 83% | 56%（sweep 单独）| merge 后 ≥83（S3 补 len8/16） |
+| cg_type_response | 29% | 50% | ⚠️ 剩 EXOKAY/DECODE bin |
+| cg_size_bus_burst | 30% | 13%（sweep 单独）| merge 后互补 |
+| cg_length_size | 1% | 1% | ⚠️ len16×size 组合待扩 |
+
+> sweep 实测（`make cov_sweep`，S17）：**Field 层全 100%**；Cross 层 len_size
+> 仍需 len16×size{1,2,4} 与 type_resp 的 EXOKAY/DECODE 补充（专项已定位）。
+
+### 历史基线（S16 stress tier）
 
 | covergroup | 层 | 覆盖率 | 未命中 bins / 缺口 |
 | --- | --- | --- | --- |

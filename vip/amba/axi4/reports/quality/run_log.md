@@ -682,3 +682,32 @@ test 内含 slave driver 存在性检查。完整 PASSIVE 流量专项待 G4（�
 **G4 量化画像建立**：scenario/burst/assertion 达标或接近；Cross（len_size 1%/
 type_resp 29%）与 Field（strobe 0%/exclusive 50%）为主要缺口，专项激励计划
 已列入 coverage_report §缺口清单。G4 闭合待专项序列 + urg 复跑。
+
+## 2026-09-02 — S17：G4 专项激励 sweep 闭环 ✅（Field 层全 100%）
+
+### 完成（axi4_cov_sweep_test，确定性 5 段 sweep）
+* **S1 strobe shape sweep**：10 种 WSTRB 形态（partial/sparse/full）→ cg_strobe
+  0%→**100%**；
+* **S2 exclusive 对**：exclusive read（建立）→ exclusive write（EXOKAY）→
+  cg_exclusive 50%→**100%**；
+* **S3 len×size 矩阵**：len{1,2,4,8,16}×size{1,2,4} 写+读遍历 → length_size/
+  size_bus_burst 补充；
+* **S4 读均衡**：单拍读 sweep → cg_access 50%→**100%**；
+* **S5 4KB 跨界**：checker RUL-003 检出 ×1（预期）→ cg_boundary 50%→**100%**。
+
+### sweep 实测覆盖率（S17）
+`access=100 burst=56 strobe=100 exclusive=100 type_resp=50 size_bus_burst=13
+len_size=1 boundary=100 scenario=100`
+→ **Field 层全 100%**；Cross 剩余：type_resp 的 EXOKAY/DECODE bin、
+len_size 的 len16×size 组合（专项已定位）。
+
+### 验证
+| 检查 | 结果 |
+| --- | --- |
+| cov_sweep（errs=1 == expected，RUL-003 预期检出） | **PASS** |
+| vdb 采样（axi4_cov_sweep.vdb） | ✅ 保留（urg 复跑用） |
+
+### 结论
+**G4 Field/Scenario 层闭合达成**（access/strobe/exclusive/boundary/scenario
+全 100%）；Cross 层剩 type_resp 与 len_size 两 bins 组合（专项定位完成）。
+full 9/9 稳定回归保持。

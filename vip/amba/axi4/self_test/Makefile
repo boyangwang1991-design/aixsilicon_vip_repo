@@ -149,6 +149,18 @@ passive: compile
 		echo "PASS: timeout 检出确认（R 响应超时 ≥1）" || \
 		( echo "FAIL: timeout 未检出"; exit 1 )
 
+# 覆盖 sweep 专项（G4）：strobe/exclusive/len×size/4KB cross 确定性遍历；
+# 预期 RUL-003 检出 ×1（S5 边界跨越）——coverage 采样含于本 sim
+cov_sweep: compile
+	@echo "=== RUN axi4 coverage sweep (G4 专项激励) ==="
+	$(SIM_DIR)/simv +UVM_TESTNAME=axi4_cov_sweep_test $(COV_OPTS) \
+		-cm_name axi4_cov_sweep -l $(LOG_DIR)/axi4_cov_sweep_test.log +ntb_random_seed=1
+	@errs=$$(grep -oE "UVM_ERROR : *[0-9]+" $(LOG_DIR)/axi4_cov_sweep_test.log | grep -oE "[0-9]+" | tail -1); \
+	if [ "$$errs" != "1" ]; then \
+		echo "FAIL: cov_sweep (UVM_ERROR=$$errs expected=1)"; exit 1; \
+	fi; \
+	grep -E "axi4_coverage\]" $(LOG_DIR)/axi4_cov_sweep_test.log | tail -1
+
 regression: full
 
 # full = 9 tier 稳定回归（含 concurrent + error + ral）。
