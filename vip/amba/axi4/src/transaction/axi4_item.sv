@@ -63,11 +63,16 @@ class axi4_item extends uvm_sequence_item;
 
   // ===========================================================================
   // 注入控制（per-transaction；driver 优先取 item 级，回退 driver 全局钩子）
-  //   inject_early_wlast     : 倒数第 2 拍提前 WLAST（burst 缩短，RUL-017）
-  //   inject_unstable_payload: W stalled 期翻转 wdata/wstrb（RUL-011）
+  //   inject_early_wlast      : 第 2 拍提前 WLAST（burst 缩短，RUL-017）
+  //   inject_unstable_payload : W stalled 期翻转 wdata/wstrb（RUL-011）
+  //   inject_missing_wlast    : 末拍缺失 WLAST（RUL-005）
+  //   inject_valid_drop       : VALID 在未握手时提前撤销（RUL-001）
+  //   非 rand（控制标志，randomize 不得污染；构造默认全 0）
   // ===========================================================================
-  rand bit inject_early_wlast;
-  rand bit inject_unstable_payload;
+  bit inject_early_wlast;
+  bit inject_unstable_payload;
+  bit inject_missing_wlast;
+  bit inject_valid_drop;
 
   // ===========================================================================
   // 内部状态（事件：address/write_data/response 的 begin/end）
@@ -120,8 +125,10 @@ class axi4_item extends uvm_sequence_item;
     strobe            = new[1];
     response          = new[0];
     has_response      = 1;
-    inject_early_wlast     = 0;
+    inject_early_wlast      = 0;
     inject_unstable_payload = 0;
+    inject_missing_wlast    = 0;
+    inject_valid_drop       = 0;
     start_delay       = 0;
     address_ready_delay = 0;
     response_start_delay = 0;

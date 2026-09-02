@@ -134,6 +134,12 @@ ral: compile
 	@echo "=== RUN axi4 RAL (frontdoor/predictor/memory) ==="
 	$(MAKE) _sim_run UVM_TESTNAME=axi4_ral_test ALLOW_ERRORS=0
 
+# RUL 专项 tier：M1 valid-drop（RUL-001 SVA）+ M2 missing-WLAST（RUL-005 checker）
+# 双注入各须检出 ≥1（report_phase 判定；阈值 MIN=2 兜底）
+rul: compile
+	@echo "=== RUN axi4 RUL 专项 (M1 valid-drop + M2 missing-WLAST) ==="
+	$(MAKE) _sim_run_min UVM_TESTNAME=axi4_rul_test MIN_ERRORS=2
+
 regression: full
 
 # full = 9 tier 稳定回归（含 concurrent + error + ral）。

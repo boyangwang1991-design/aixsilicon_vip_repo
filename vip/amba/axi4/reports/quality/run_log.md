@@ -569,3 +569,32 @@ master 读路径异步化：AR 完成即 item_done，R 由独立收集进程回�
 ### 结论
 **P1-2 outstanding 读异步化闭环**（known_limitations #3 解除）；PRO-008 完整并发
 （多 ID outstanding 读/写 + 交织）具备专项 PASS 证据。full 9/9 稳定回归保持。
+
+## 2026-09-02 — S13：P2-1 RUL 专项注入基础设施就位（M1/M2 场景待闭环，诚实 NOT_RUN）
+
+### 完成
+1. **item 级注入扩展**：`axi4_item` 新增 `inject_missing_wlast`（RUL-005）/
+   `inject_valid_drop`（RUL-001），改非 rand（防 randomize 污染）；
+   driver 的 missing_wlast 分支 item 级优先（M2）、ARVALID 提前撤销钩子（M1）。
+2. **checker RUL-005 检测器**：写事务"数据收满但无 WLAST"（`write_data_ended_status==0`
+   且 data.size()==burst_length 且 has_response）→ missing-WLAST 违规检出。
+3. **slave AR 握手语义修正**：`wait_for_read_request` 改为 **ARVALID && ARREADY
+   同拍握手才采样**（旧实现只看 arvalid，VALID drop 场景会采到未完成握手的请求）。
+4. 新增 `axi4_rul_test`（M1/M2 双注入 + 合法对照）+ Makefile `rul` target + filelist。
+
+### 场景现状（诚实，NOT_RUN）
+* **M1 valid-drop**：撤销后 slave 采样/响应时序与 master 恢复握手失配 → 死锁
+  （SMOKE TIMEOUT）。需 slave 侧"未握手 AR 丢弃后重新可采样"的容错语义，G4 深化。
+* **M2 missing-WLAST**：monitor 依 WLAST 归属切换，缺失 WLAST 时 store 不推进
+  → 后续事务 W 归属连锁错乱。需"收满 burst_length 即结束 W 阶段"容错，G4 深化。
+* rul tier 独立 target（`make rul`，MIN=2），不纳入 full；full 9/9 稳定回归不受影响。
+
+### 验证
+| 检查 | 结果 |
+| --- | --- |
+| compile（含 rul_test/新检测器） | PASS |
+| full 回归（未纳入 rul） | 9/9 PASS 保持 |
+
+### 结论
+P2-1 的**注入钩子 + 检测器 + 测试骨架就位**；M1/M2 场景闭环依赖 monitor/slave
+容错语义（收满即终、未握手丢弃重采），列入 G4 深化清单，如实 NOT_RUN 不伪报。

@@ -134,6 +134,19 @@ class axi4_master_driver extends uvm_driver #(axi4_master_item);
       vif.master_cb.arprot  <= item.protection;
       vif.master_cb.arqos   <= item.qos;
       vif.master_cb.arregion<= item.region;
+      // M1/RUL-001 负向：VALID 提前撤销（stall 一拍后拉低 ARVALID 再重试，
+      // SVA a_arvalid_stable 应检出；之后恢复正常握手完成本笔读）
+      if (item.inject_valid_drop) begin
+        @(vif.master_cb);
+        if (!(vif.master_cb.arready === 1'b1)) begin
+          vif.master_cb.arvalid <= 0;   // 未握手即撤销 → RUL-001 违规
+          @(vif.master_cb);
+          vif.master_cb.arvalid <= 1;   // 恢复（本注入只制造一次违规）
+          `uvm_info(get_type_name(),
+            $sformatf("VALID_DROP injected @addr=0x%0h（ARVALID 提前撤销）",
+                      item.address), UVM_LOW)
+        end
+      end
       do @(vif.master_cb); while (!(vif.master_cb.arready === 1'b1));
       item.begin_address();
       vif.master_cb.arvalid <= 0;
@@ -143,15 +156,17 @@ class axi4_master_driver extends uvm_driver #(axi4_master_item);
   protected task drive_write_data(axi4_master_item item);
     bit do_early_wlast;
     bit do_unstable;
+    bit do_missing_wlast;
     // clocking output 付值必须先同步到 clocking event（AW-first 路径由
     // drive_address 的 @(master_cb) 提供同步；decouple 的 W-first 路径
     // 此处是 item 处理入口，无同步则首次付值落非法窗口被丢弃 → C3 丢 W）
     @(vif.master_cb);
     vif.master_cb.wvalid <= 0;
-    // 注入钩子：item 级优先（per-transaction，sequence 可独立控制 E1/E2），
+    // 注入钩子：item 级优先（per-transaction，sequence 可独立控制注入），
     // 回退 driver 全局 bit（负面 test 批量注入时仍可用）。
-    do_early_wlast = inject_early_wlast | item.inject_early_wlast;
-    do_unstable    = inject_unstable_payload | item.inject_unstable_payload;
+    do_early_wlast   = inject_early_wlast   | item.inject_early_wlast;
+    do_unstable      = inject_unstable_payload | item.inject_unstable_payload;
+    do_missing_wlast = inject_missing_wlast | item.inject_missing_wlast;
     if (item.is_write()) begin
       for (int i = 0; i < item.burst_length; i++) begin
         if (cfg.write_data_delay.get_delay() > 0) begin
@@ -176,9 +191,12 @@ class axi4_master_driver extends uvm_driver #(axi4_master_item);
           item.end_write_data();
           return;
         end
-        else if (inject_missing_wlast && (i == item.burst_length - 1)) begin
+        else if (do_missing_wlast && (i == item.burst_length - 1)) begin
           // RUL-005 负向：末拍缺失 WLAST
           vif.master_cb.wlast <= 0;
+          `uvm_info(get_type_name(),
+            $sformatf("MISSING_WLAST injected @addr=0x%0h（末拍缺失 WLAST）",
+                      item.address), UVM_LOW)
         end
         else begin
           vif.master_cb.wlast <= (i == item.burst_length - 1);
@@ -602,13 +620,16 @@ class axi4_slave_driver extends uvm_driver #(axi4_slave_item);
   endtask
 
   // 等待读请求（AR）
-  // slave_cb（input #1step）采样：master output#1 驱动后的稳定值（posedge 直接
-  // 采样会读到驱动前旧值 → AR 字段错位，multi-id len=2 读成 1 拍的根因）。
+  // ① 仅在 ARVALID && ARREADY 同拍握手时采样（AXI 传输语义）；旧实现只看
+  //    arvalid，VALID 在 stall 拍提前撤销（RUL-001 注入）时 slave 会采到
+  //    未完成握手的请求并提前发 R → 与 master 状态机失配死锁。
+  // ② slave_cb（input #1step）采样：master output#1 驱动后的稳定值。
   protected task wait_for_read_request(ref axi4_item item);
     axi4_item req;
     forever begin
       @(vif.slave_cb);
-      if (vif.slave_cb.arvalid === 1'b1) begin
+      if ((vif.slave_cb.arvalid === 1'b1) &&
+          (vif.arready === 1'b1)) begin
         `uvm_info(get_type_name(),
           $sformatf("SLAVE_AR sampled id=%0d addr=0x%0h t=%0t",
                     vif.slave_cb.arid, vif.slave_cb.araddr, $time), UVM_LOW)

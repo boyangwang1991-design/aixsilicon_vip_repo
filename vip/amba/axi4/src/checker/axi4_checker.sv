@@ -247,6 +247,17 @@ class axi4_checker extends uvm_scoreboard;
                        $sformatf("写事务 W 实际 %0d beat != 突发长度 %0d（burst 完整性违规）",
                                  item.data.size(), item.burst_length), "ERROR", "W", item);
     end
+
+    // ---- AXI4-REQ-RUL-005：burst 完成必须有 WLAST（missing-WLAST 注入检测）----
+    // monitor 依 WLAST 触发 end_write_data；missing-WLAST 时 data 收满 burst_length
+    // 但 write_data_ended 未置位 → 该笔事务"数据齐而无 WLAST"即缺失违规。
+    if (item.is_write() && item.has_response &&
+        (item.data.size() == item.burst_length) &&
+        (item.write_data_ended_status() == 0) &&
+        (item.burst_length > 1)) begin
+      report_violation("AXI4-REQ-RUL-005",
+                       "写事务数据收满但无 WLAST（burst 未正常终止）", "ERROR", "W", item);
+    end
   endfunction
 
   // ===========================================================================
