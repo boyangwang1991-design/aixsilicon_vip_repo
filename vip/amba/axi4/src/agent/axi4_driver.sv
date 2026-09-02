@@ -442,10 +442,20 @@ class axi4_slave_driver extends uvm_driver #(axi4_slave_item);
   axi4_status        status;
   axi4_memory        memory;
 
+  // ===========================================================================
+  // 响应注入钩子（G4/FI-013；默认关）：
+  //   inject_illegal_resp_b: B 通道发非法编码（RUL-010 检出）
+  //   inject_illegal_resp_r: R 通道发非法编码（RUL-010 检出）
+  // ===========================================================================
+  bit inject_illegal_resp_b;
+  bit inject_illegal_resp_r;
+
   `uvm_component_utils(axi4_slave_driver)
 
   function new(string name = "axi4_slave_driver", uvm_component parent = null);
     super.new(name, parent);
+    inject_illegal_resp_b = 0;
+    inject_illegal_resp_r = 0;
   endfunction
 
   function void build_phase(uvm_phase phase);
@@ -689,7 +699,16 @@ class axi4_slave_driver extends uvm_driver #(axi4_slave_item);
     repeat (cfg.response_start_delay.get_delay()) @(vif.slave_cb);
     vif.slave_cb.bvalid <= 1;
     vif.slave_cb.bid    <= item.id;
-    vif.slave_cb.bresp  <= final_resp;
+    // FI-013 注入：非法响应编码（RUL-010；enum {OKAY=000,EXOKAY=001,SLVERR=010,
+    // DECODE=011} → 3'b100 超出枚举域，为未定义非法编码）
+    if (inject_illegal_resp_b) begin
+      vif.slave_cb.bresp <= axi4_response'(3'b100);
+      `uvm_info(get_type_name(),
+        $sformatf("ILLEGAL_RESP_B injected @id=%0d（bresp=3'b100 非法编码）", item.id), UVM_LOW)
+    end
+    else begin
+      vif.slave_cb.bresp <= final_resp;
+    end
     do @(vif.slave_cb); while (!(vif.slave_cb.bready === 1'b1));
     vif.slave_cb.bvalid <= 0;
   endtask
@@ -725,7 +744,16 @@ class axi4_slave_driver extends uvm_driver #(axi4_slave_item);
       vif.slave_cb.rvalid <= 1;
       vif.slave_cb.rid    <= item.id;
       vif.slave_cb.rdata  <= (memory != null) ? rdata[i] : '0;
-      vif.slave_cb.rresp  <= resp_status;
+      // FI-013 注入：R 通道非法响应编码（RUL-010；3'b101 超出枚举域）
+      if (inject_illegal_resp_r) begin
+        vif.slave_cb.rresp <= axi4_response'(3'b101);
+        `uvm_info(get_type_name(),
+          $sformatf("ILLEGAL_RESP_R injected @id=%0d beat=%0d（rresp=3'b101 非法编码）",
+                    item.id, i), UVM_LOW)
+      end
+      else begin
+        vif.slave_cb.rresp <= resp_status;
+      end
       vif.slave_cb.rlast  <= (i == item.burst_length - 1);
       do @(vif.slave_cb); while (!(vif.slave_cb.rready === 1'b1));
     end

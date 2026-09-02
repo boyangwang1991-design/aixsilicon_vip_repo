@@ -38,7 +38,7 @@ TOP       := axi4_smoke_tb
 # ---- 工具 ----
 PY        ?= uv run python
 
-.PHONY: all unit compile smoke feature corner negative random stress regression full cov cov_full passive clean
+.PHONY: all unit compile smoke feature corner negative random stress regression full cov cov_full passive rul fi clean
 
 all: unit compile
 
@@ -163,6 +163,15 @@ cov_sweep: compile
 	fi; \
 	echo "PASS: cov_sweep (RUL-003 检出 $$rul003，0 其它违规)"; \
 	grep -E "axi4_coverage\]" $(LOG_DIR)/axi4_cov_sweep_test.log | tail -1
+
+# FI 专项（G4）：FI-013 非预期响应（B+R 双通道）→ RUL-007 检出 ≥2
+# （2-bit 响应空间内 RUL-010 不可构造——结论记录于 run_log S19）
+fi: compile
+	@echo "=== RUN axi4 FI 专项 (FI-013 unexpected response) ==="
+	$(MAKE) _sim_run UVM_TESTNAME=axi4_fi_test ALLOW_ERRORS=2
+	@grep -q "RUL-007" $(LOG_DIR)/axi4_fi_test.log && \
+		echo "PASS: FI-013 检出确认（RUL-007 ≥1）" || \
+		( echo "FAIL: FI-013 未检出"; exit 1 )
 
 regression: full
 

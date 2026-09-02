@@ -730,3 +730,27 @@ size_bus_burst=13 len_size=1 boundary=100 scenario=100`
 **Field 全 100% + type_resp 83%**；Cross 剩余两项均为"merge 汇总/采样通道"
 性质（非激励缺失）：len_size 待 urg merge 汇总、EXOKAY 待 exclusive resp
 接入。G4 收尾清单缩至 3 项机械工作（merge 复跑/EXOKAY 通道/FI-009~015）。
+
+## 2026-09-02 — S19：FI-013 响应异常注入闭环 ✅（RUL-007 ×2 检出）
+
+### 完成
+1. **slave 响应注入钩子**：`inject_illegal_resp_b/r`（B/R 双通道）——
+   `drive_write_response`/`drive_read_response` 强制发非预期响应编码；
+2. **FI-013 场景**（`axi4_fi_test`）：写（B 通道）+ 读（R 通道）双注入 →
+   checker **RUL-007 检出 ×2**（"非 exclusive 事务返回 EXOKAY"——enum cast
+   截断后实际为 EXOKAY 路径）；`make fi` PASS（ALLOW_ERRORS=2 精确）；
+3. **验证结论（重要）**：AXI4 标准 **2-bit 响应空间（00/01/10/11）内全部 4 个
+   编码均合法**——RUL-010 的"非法编码"子句在标准界面上不可构造；注入实际
+   命中 RUL-007（EXOKAY 误用）路径，检出有效；RUL-010 完整触发需 3-bit+
+   扩展界面（记录于 fault_injection/README）。
+
+### 验证
+| 检查 | 结果 |
+| --- | --- |
+| fi tier（FI-013 双通道注入） | **PASS（RUL-007 ×2，ALLOW_ERRORS=2 精确）** |
+| full 回归 | **9/9 PASS** |
+
+### 结论
+**FI-013 闭环**（G4 注入实现第 9 类 VALIDATED）；"2-bit 响应空间不可构造
+非法编码"验证结论记录。剩余 FI-009~012/014/015（需 multi-ID 乱序/复位/
+WSTRB 越界/exclusive 冲突等 slave 行为改造）。

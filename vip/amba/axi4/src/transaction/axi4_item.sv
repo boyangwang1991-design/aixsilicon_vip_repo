@@ -77,6 +77,8 @@ class axi4_item extends uvm_sequence_item;
   // 观察标志（monitor 置位）：W 阶段是否出现过 WLAST（RUL-005 检测依据）
   bit wlast_seen;
 
+  // （FI-013 非法响应编码注入由 slave driver 钩子 inject_illegal_resp_b/r 实现）
+
   // ===========================================================================
   // 内部状态（事件：address/write_data/response 的 begin/end）
   // ===========================================================================
