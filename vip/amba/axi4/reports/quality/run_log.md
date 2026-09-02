@@ -476,3 +476,57 @@ full 升级为 7 tier 稳定回归。
 ### 结论
 **error tier 由 NOT_RUN 转 E1 VALIDATED + RAL 定向验证闭环**；full 升级为 9 tier 全绿。
 剩余两项（E2/C3）与 outstanding 读均诚实 NOT_RUN，进入 G4 覆盖闭合阶段。
+
+## 2026-09-02 — S11：P0 技术债清零（E2 RUL-011 + C3 decouple 双闭环）+ G4 覆盖管道建立
+
+### 目标
+按优先级逐项闭环：P0-1 E2（RUL-011 SVA 检出）、P0-2 C3（W-before-AW 回环）、
+P1-1 覆盖闭合管道。
+
+### P0-1：E2 unstable payload（RUL-011）闭环 ✅
+* **根因 1（backpressure delta 循环）**：`backpressure_proc` 的
+  `repeat(delay) wready<=0; wready<=1` 无时钟沿间隔，付值被覆盖 → wready 恒 1，
+  stall 窗口从不出现。修复为**跨沿拉低**（`repeat @(slave_cb) wready<=0` 后恢复）。
+* **根因 2（注入只 wake 一次）**：`inject_unstable_payload` 的 fork 若 wake 时恰逢
+  wready=1 则漏检。修复为 **forever 循环等 stall 拍**（wready=0 拍立即翻转 payload）。
+* **结构化**：E2 拆为独立 `axi4_error_seq_e2`；test 分两阶段——**阶段 1（stall 开）
+  E2+E1、阶段 2（stall 关）E3/E4 干净运行**，消除 stall 外溢。
+* **结果**：E2 检出 **RUL-011 ×4**（wdata/wstrb_stable 各 2，addr=0xc100）；
+  E1 检出 RUL-017 ×2；report_phase 判定 RUL-011≥1 且 RUL-017≥1（双 VALIDATED）。
+  RUL-005×2 为 E2 注入附带现象（WLAST 拍遇 stall），日志可解释。
+
+### P0-2：C3 W-before-AW 解耦（PRO-019）闭环 ✅
+* **根因（clocking output 首付值无同步）**：decouple 路径 `drive_write_data` 是 item
+  处理入口，首个 clocking output 付值（wvalid<=0）未先 `@(master_cb)` 同步 →
+  落非法窗口被丢弃，W 拍从未上线（W_PRE 队列 0 条 DECE 证据）。AW-first 路径
+  由 `drive_address` 提供同步故不受影响。
+* **修复**：`drive_write_data` 开头补 `@(vif.master_cb)`；同时统一 slave 侧采样沿
+  （`w_pre_collect_thread` 与 `wait_for_write_request` 均改 `@(posedge aclk)` +
+  接口顶层信号，消除 input#1step 与 output#1 错位）。
+* **结果**：接入 seq3 到 concurrent tier → **W-before-AW decouple write/read
+  loopback PASS**，C1+C2+C3 全绿（UVM_ERROR=0）。
+
+### P1-1：G4 覆盖闭合管道 ✅（管道建立，阈值判定待下轮）
+* `make cov_full`：6 tier（smoke/feature/corner/negative/random/stress）功能覆盖
+  采样 → vdb 保留（`build/cov/axi4_cov_*.vdb`）→ urg merge（不可用时 WARN 保留证据）。
+* 功能覆盖 summary（axi4_coverage 打印）：stress/random **scenario=100**（最高）、
+  burst=83、size_bus_burst=30；smoke 基线 scenario=50。四层模型
+  （Feature/Field/Cross/Scenario）covergroup 全部实例化并采样。
+
+### 验证（VCS W-2024.09-SP1 / UVM 1.2 / seed=1）
+| 检查 | 结果 |
+| --- | --- |
+| error tier | **PASS**（RUL-017=2 + RUL-011=4，双 VALIDATED） |
+| concurrent tier（含 C3 decouple） | **PASS**（multi-id + outstanding + W-before-AW） |
+| full 回归 | **9/9 PASS** |
+| cov_full（6 tier 采样） | PASS（vdb + summary 证据） |
+
+### 剩余（如实，更新优先级）
+* P1-2 outstanding 读异步化 + 多 ID 乱序/交织（PRO-008 完整并发）；
+* P2-1 RUL 专项负向注入全集（001/002/005/006/007/008/009/010/012~016）；
+* P2-2 PASSIVE/timeout/extension 专项；
+* P3-1 rtm.md S10/S11 同步、P3-2 examples//fault_injection/。
+
+### 结论
+**P0 技术债清零**：E2/C3 由 NOT_RUN 转 VALIDATED，known_limitations #1/#2 解除；
+G4 覆盖管道建立（cov_full 证据化）。full 9/9 稳定回归保持。

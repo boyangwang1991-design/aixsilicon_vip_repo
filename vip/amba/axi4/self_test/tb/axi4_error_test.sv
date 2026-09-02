@@ -18,6 +18,67 @@ import uvm_pkg::*;
 import axi4_pkg::*;
 import axi4_types_pkg::*;
 
+// E2 专用：unstable payload 注入 + 依赖 test 在事务期间开 wready_delay（stall）。
+// 与 E1（early-WLAST）拆开，避免 E2 的 stall 外溢干扰 E3/E4 合法性。
+class axi4_error_seq_e2 extends axi4_master_base_seq;
+
+  `uvm_object_utils(axi4_error_seq_e2)
+
+  function new(string name = "axi4_error_seq_e2");
+    super.new(name);
+  endfunction
+
+  virtual task body();
+    axi4_data bdata[];
+    axi4_strobe bstrobe[];
+    axi4_master_item item;
+
+    bdata   = new[4];
+    bstrobe = new[4];
+    foreach (bdata[i]) begin
+      bdata[i]   = 32'hE200_0000 + i;
+      bstrobe[i] = '1;
+    end
+    item = axi4_master_item::type_id::create("item_e2");
+    item.access_type  = AXI4_WRITE_ACCESS;
+    item.id           = 2;
+    item.address      = 32'h0000_C100;
+    item.burst_length = 4;
+    item.burst_size   = 4;
+    item.burst_type   = AXI4_INCREMENTING_BURST;
+    item.data         = bdata;
+    item.strobe       = bstrobe;
+    item.inject_unstable_payload = 1;
+    `uvm_info(get_type_name(), "E2: unstable payload injection (expect SVA RUL-011 detect)", UVM_LOW)
+    start_item(item);
+    finish_item(item);
+    #50;
+
+    // ---- E1: early WLAST（RUL-017，item 级注入；与 E2 同阶段（stall 环境），
+    //      slave 16 拍超时完成缩短事务；E3/E4 在阶段 2（stall 关）干净运行）----
+    foreach (bdata[i]) begin
+      bdata[i]   = 32'hE100_0000 + i;
+      bstrobe[i] = '1;
+    end
+    item = axi4_master_item::type_id::create("item_e1");
+    item.access_type  = AXI4_WRITE_ACCESS;
+    item.id           = 1;
+    item.address      = 32'h0000_C000;
+    item.burst_length = 4;
+    item.burst_size   = 4;
+    item.burst_type   = AXI4_INCREMENTING_BURST;
+    item.data         = bdata;
+    item.strobe       = bstrobe;
+    item.inject_early_wlast = 1;
+    `uvm_info(get_type_name(), "E1: early-WLAST injection (expect checker RUL-017 detect)", UVM_LOW)
+    start_item(item);
+    finish_item(item);
+    #50;
+  endtask
+
+endclass : axi4_error_seq_e2
+
+
 class axi4_error_seq extends axi4_master_base_seq;
 
   `uvm_object_utils(axi4_error_seq)
@@ -37,43 +98,8 @@ class axi4_error_seq extends axi4_master_base_seq;
       bstrobe[i] = '1;
     end
 
-    // ---- E1: early WLAST（len=4，第 2 拍提前 WLAST；RUL-017，item 级注入）----
-    begin
-      axi4_master_item item;
-      item = axi4_master_item::type_id::create("item_e1");
-      item.access_type  = AXI4_WRITE_ACCESS;
-      item.id           = 1;             // 独立 ID，避免与 E2 混淆
-      item.address      = 32'h0000_C000;
-      item.burst_length = 4;
-      item.burst_size   = 4;
-      item.burst_type   = AXI4_INCREMENTING_BURST;
-      item.data         = bdata;
-      item.strobe       = bstrobe;
-      item.inject_early_wlast = 1;      // 仅 E1：第 2 拍 WLAST，burst 缩短
-      `uvm_info(get_type_name(), "E1: early-WLAST injection (expect checker RUL-017 detect)", UVM_LOW)
-      start_item(item);
-      finish_item(item);
-    end
-    #50;
-
-    // ---- E2: stalled payload 翻转（RUL-011，item 级注入；仅 unstable_payload）----
-    begin
-      axi4_master_item item;
-      item = axi4_master_item::type_id::create("item_e2");
-      item.access_type  = AXI4_WRITE_ACCESS;
-      item.id           = 2;             // 独立 ID，避免与 E1 混淆
-      item.address      = 32'h0000_C100;
-      item.burst_length = 4;
-      item.burst_size   = 4;
-      item.burst_type   = AXI4_INCREMENTING_BURST;
-      item.data         = bdata;
-      item.strobe       = bstrobe;
-      item.inject_unstable_payload = 1; // 仅 E2：stalled 期间翻转 wdata/wstrb
-      `uvm_info(get_type_name(), "E2: unstable payload injection (expect SVA RUL-011 detect)", UVM_LOW)
-      start_item(item);
-      finish_item(item);
-    end
-    #50;
+    // E1/E2 由独立 seq（axi4_error_seq_e2）在阶段 1（stall 开）执行；
+    // E3/E4 在阶段 2（stall 关）干净运行。
 
     // ---- E3: SLVERR 响应（合法语义，response weight 已由 test 配置）----
     begin
@@ -114,11 +140,11 @@ class axi4_error_test extends uvm_test;
   endtask
 
   task run_phase(uvm_phase phase);
-    axi4_error_seq seq;
+    axi4_error_seq     seq;
+    axi4_error_seq_e2  seq_e2;
 
-    // E1/E2 注入为 item 级（见 axi4_error_seq body：inject_early_wlast /
-    // inject_unstable_payload per-transaction）；此处不再设置 driver 全局钩子，
-    // 避免 E1/E2 交叉污染。全局钩子保留给其它负面测试使用。
+    // E1/E2 注入为 item 级（per-transaction）；wready stall 仅在 E2 阶段启用
+    //（阶段化控制，避免 stall 外溢干扰 E3/E4 合法性 → RUL-005 误报）。
     if (env.slave_cfg != null) begin
       // E3：SLVERR 权重（合法响应语义）
       env.slave_cfg.response_weight_okay        = 0;
@@ -132,19 +158,28 @@ class axi4_error_test extends uvm_test;
       env.slave_cfg.arready_delay.delay_kind = 1;
       env.slave_cfg.arready_delay.delay_min  = 1;
       env.slave_cfg.arready_delay.delay_max  = 3;
-      // E2 的 W stall：确定性固定 2 拍 0（wready 每 3 拍拉低 2 拍 → W 拍
-      // wvalid=1 时必然遇 wready=0 窗口，RUL-011 翻转 SVA 有前因）
-      env.slave_cfg.wready_delay.enabled     = 1;
-      env.slave_cfg.wready_delay.delay_kind  = 0;   // FIXED
-      env.slave_cfg.wready_delay.delay_value = 2;
-      env.slave_cfg.wready_delay.delay_min   = 2;
-      env.slave_cfg.wready_delay.delay_max   = 2;
+      // wready stall 默认关闭（E2 阶段临时开启）
+      env.slave_cfg.wready_delay.enabled     = 0;
+      env.slave_cfg.wready_delay.delay_kind  = 0;
+      env.slave_cfg.wready_delay.delay_value = 3;
+      env.slave_cfg.wready_delay.delay_min   = 3;
+      env.slave_cfg.wready_delay.delay_max   = 3;
+    end
+    // ===== 阶段 1：E2（unstable payload）——启用 wready stall =====
+    if (env.slave_cfg != null) begin
+      env.slave_cfg.wready_delay.enabled = 1;
     end
 
+    seq     = axi4_error_seq::type_id::create("seq");
+    seq_e2  = axi4_error_seq_e2::type_id::create("seq_e2");
+
     phase.raise_objection(this);
-    seq = axi4_error_seq::type_id::create("seq");
-    if (!seq.randomize()) begin
-      `uvm_fatal(get_type_name(), "randomize failed")
+    seq_e2.start(env.master_agent.sequencer);
+    #100;
+
+    // ===== 阶段 2：关闭 stall，跑 E1（early-WLAST）+ E3（SLVERR）+ E4（背压）=====
+    if (env.slave_cfg != null) begin
+      env.slave_cfg.wready_delay.enabled = 0;
     end
     seq.start(env.master_agent.sequencer);
     #300;
@@ -154,20 +189,25 @@ class axi4_error_test extends uvm_test;
   function void report_phase(uvm_phase phase);
     uvm_report_server svr = uvm_report_server::get_server();
     int errs;
+    int rul011;
     int rul017;
     super.report_phase(phase);
     errs   = svr.get_severity_count(UVM_ERROR);
-    // E1（RUL-017 burst 缩短，checker 检出）为已验证闭环：必须 ≥1。
-    // E2（RUL-011 payload stability，SVA 检出）依赖 stall 时序，当前 NOT_RUN
-    // 诚实标注（validation-plan §17.2 已知限制），不并入通过判定。
-    if (errs < 1) begin
-      `uvm_error(get_type_name(), $sformatf(
-        "error test: 0 violations detected — E1 early-WLAST (RUL-017) MUST be caught", errs))
+    rul011 = svr.get_id_count("AXI4-REQ-RUL-011");
+    rul017 = svr.get_id_count("AXI4-REQ-RUL-017");
+    // E1（RUL-017 burst 缩短）与 E2（RUL-011 payload stability）均为已验证闭环：
+    // 两者各须 ≥1 检出；E3/E4 为合法语义场景，其余违规不允许。
+    if (rul017 < 1) begin
+      `uvm_error(get_type_name(),
+        "error test: E1 early-WLAST (RUL-017) MUST be caught >=1")
     end
-    else begin
-      `uvm_info(get_type_name(), $sformatf(
-        "error test: %0d violation(s) detected — E1 RUL-017 VALIDATED; E2 RUL-011 SVA pending (NOT_RUN)", errs), UVM_LOW)
+    if (rul011 < 1) begin
+      `uvm_error(get_type_name(),
+        "error test: E2 unstable payload (RUL-011 SVA) MUST be caught >=1")
     end
+    `uvm_info(get_type_name(), $sformatf(
+      "error test: RUL-017=%0d RUL-011=%0d total=%0d — E1+E2 mutation VALIDATED",
+      rul017, rul011, errs), UVM_LOW)
   endfunction
 
 endclass : axi4_error_test

@@ -201,6 +201,7 @@ class axi4_concurrent_test extends uvm_test;
     axi4_multi_id_seq   seq1;
     axi4_outstanding_seq seq2;
     axi4_decouple_seq   seq3;
+    axi4_master_driver  mdrv;
 
     phase.raise_objection(this);
 
@@ -216,10 +217,18 @@ class axi4_concurrent_test extends uvm_test;
     seq2.start(env.master_agent.sequencer);
     #50;
 
-    // C3 W-before-AW 解耦（PRO-019）：driver `decouple_w_before_aw` 已实现，
-    // slave 侧已修复"预收仅采集握手 W 拍"（wready 判定），但 master 用
-    // master_cb(output #1) 驱动、slave 用 slave_cb(input #1step) 采样，
-    // clocking 沿错位导致预收漏采 → 本轮 NOT_RUN，run_log S10 如实登记。
+    // C3 W-before-AW 解耦（PRO-019）：采样沿统一修复后（slave 预收与 AW 采样
+    // 均改 @(posedge aclk) + 顶层信号），接入回环验证。
+    if (env.master_agent.driver != null) begin
+      mdrv = env.master_agent.driver;
+      mdrv.decouple_w_before_aw = 1;
+    end
+    seq3 = axi4_decouple_seq::type_id::create("seq3");
+    seq3.start(env.master_agent.sequencer);
+    #50;
+    if (mdrv != null) begin
+      mdrv.decouple_w_before_aw = 0;   // 恢复默认形态
+    end
 
     phase.drop_objection(this);
   endtask

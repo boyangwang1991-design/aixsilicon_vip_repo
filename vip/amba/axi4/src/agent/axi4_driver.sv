@@ -132,6 +132,10 @@ class axi4_master_driver extends uvm_driver #(axi4_master_item);
   protected task drive_write_data(axi4_master_item item);
     bit do_early_wlast;
     bit do_unstable;
+    // clocking output 付值必须先同步到 clocking event（AW-first 路径由
+    // drive_address 的 @(master_cb) 提供同步；decouple 的 W-first 路径
+    // 此处是 item 处理入口，无同步则首次付值落非法窗口被丢弃 → C3 丢 W）
+    @(vif.master_cb);
     vif.master_cb.wvalid <= 0;
     // 注入钩子：item 级优先（per-transaction，sequence 可独立控制 E1/E2），
     // 回退 driver 全局 bit（负面 test 批量注入时仍可用）。
@@ -169,16 +173,24 @@ class axi4_master_driver extends uvm_driver #(axi4_master_item);
           vif.master_cb.wlast <= (i == item.burst_length - 1);
         end
         // RUL-011 负向：等待 READY 期间翻转 payload。
-        // 语义：wvalid=1 已置位（上方），若本拍 wready=0（stall），fork
-        // 在下一沿翻转 wdata/wstrb（此时 wdata 变化且前拍是 stall），
-        // 使 SVA (wvalid && !wready) |=> (payload != $past(payload)) 触发。
+        // 确定性语义：持续等待 stall 拍（wready=0），**本拍（stall 采样沿）立即
+        // 翻转 wdata/wstrb**——SVA `(wvalid && !wready) |=> (payload != $past)`
+        // 前因是 stall 拍，而翻转须紧随其后；在 stall 采样沿后的付值窗口内
+        // 翻转，使 T+1 检查捕获变化（T 为 stall 前因拍）。
         if (do_unstable) begin
           fork
             begin
-              @(vif.master_cb);
-              if (!(vif.master_cb.wready === 1'b1)) begin
-                vif.master_cb.wdata <= ~item.data[i];
-                vif.master_cb.wstrb <= ~item.strobe[i];
+              forever begin
+                @(vif.master_cb);
+                if (!(vif.master_cb.wready === 1'b1)) begin
+                  // stall 拍到：立即翻转 payload（付值窗口，本沿后生效）
+                  `uvm_info(get_type_name(),
+                    $sformatf("RUL011_STALL hit @beat=%0d addr=0x%0h wready=0 → flip wdata/wstrb",
+                              i, item.address), UVM_LOW)
+                  vif.master_cb.wdata <= ~item.data[i];
+                  vif.master_cb.wstrb <= ~item.strobe[i];
+                  break;
+                end
               end
             end
           join_none
@@ -408,7 +420,13 @@ class axi4_slave_driver extends uvm_driver #(axi4_slave_item);
           vif.slave_cb.awready <= 1;
         end
         if (cfg.wready_delay.enabled) begin
-          repeat (cfg.wready_delay.get_delay()) vif.slave_cb.wready <= 0;
+          // 跨时钟沿拉低：每拍保持 wready=0 达 delay 个沿后再恢复为 1。
+          // 旧实现 `repeat(delay) <=0; <=1` 是 delta 循环无沿间隔，实际恒为 1。
+          repeat (cfg.wready_delay.get_delay()) begin
+            @(vif.slave_cb);
+            vif.slave_cb.wready <= 0;
+          end
+          @(vif.slave_cb);
           vif.slave_cb.wready <= 1;
         end
         if (cfg.arready_delay.enabled) begin
@@ -449,15 +467,16 @@ class axi4_slave_driver extends uvm_driver #(axi4_slave_item);
 
   protected task w_pre_collect_thread();
     // 仅采集"已握手"的 W 拍（wvalid && wready）：AXI 传输以两者同时为高为准。
-    // 旧实现只看 wvalid，在 W 被 stall（wready=0）时会误采未握手拍 → 数据错位。
-    // wready 是 slave 自己驱动的 clocking output，回读采样非法 → 读接口顶层信号。
+    // 统一采样沿：用 @(posedge aclk) + 接口顶层信号（与 master 驱动的真实总线
+    // 值对齐），避免 slave_cb(input #1step) 与 master_cb(output #1) 的沿错位
+    // 导致 W-before-AW 预收漏采（P0-2/C3 修复）。
     forever begin
-      @(vif.slave_cb);
-      if ((vif.slave_cb.wvalid === 1'b1) &&
+      @(posedge vif.aclk);
+      if ((vif.wvalid === 1'b1) &&
           (vif.wready === 1'b1) &&
-          !$isunknown(vif.slave_cb.wdata)) begin
-        w_pre_data.push_back(vif.slave_cb.wdata);
-        w_pre_strb.push_back(vif.slave_cb.wstrb);
+          !$isunknown(vif.wdata)) begin
+        w_pre_data.push_back(vif.wdata);
+        w_pre_strb.push_back(vif.wstrb);
       end
     end
   endtask
@@ -473,22 +492,24 @@ class axi4_slave_driver extends uvm_driver #(axi4_slave_item);
 
     store = new;
     done = 0;
+    // 统一采样沿：@(posedge aclk) + 顶层信号（与 w_pre_collect_thread 对齐，
+    // 消除 slave_cb input#1step 与 master_cb output#1 的沿错位 → C3 修复）
     while (!done) begin
-      @(vif.slave_cb);
-      if (vif.slave_cb.awvalid === 1'b1) begin
+      @(posedge vif.aclk);
+      if (vif.awvalid === 1'b1) begin
         // 采样 AW（req 在 task 顶部声明，避免 VCS 嵌套 block 声明解析问题）
         req = axi4_item::type_id::create("req");
         req.access_type = AXI4_WRITE_ACCESS;
-        req.id           = vif.slave_cb.awid;
-        req.address      = vif.slave_cb.awaddr;
-        req.burst_length = unpack_burst_length(vif.slave_cb.awlen);
-        req.burst_size   = unpack_burst_size(vif.slave_cb.awsize);
-        req.burst_type   = vif.slave_cb.awburst;
-        req.lock         = vif.slave_cb.awlock;
-        req.memory_type  = decode_memory_type(vif.slave_cb.awcache, 0);
-        req.protection   = vif.slave_cb.awprot;
-        req.qos          = vif.slave_cb.awqos;
-        req.region       = vif.slave_cb.awregion;
+        req.id           = vif.awid;
+        req.address      = vif.awaddr;
+        req.burst_length = unpack_burst_length(vif.awlen);
+        req.burst_size   = unpack_burst_size(vif.awsize);
+        req.burst_type   = vif.awburst;
+        req.lock         = vif.awlock;
+        req.memory_type  = decode_memory_type(vif.awcache, 0);
+        req.protection   = vif.awprot;
+        req.qos          = vif.awqos;
+        req.region       = vif.awregion;
         req.data         = new[0];
         req.strobe       = new[0];
         item = req;
@@ -509,7 +530,7 @@ class axi4_slave_driver extends uvm_driver #(axi4_slave_item);
               strobe.push_back(w_pre_strb.pop_front());
             end
             else begin
-              @(vif.slave_cb);
+              @(posedge vif.aclk);
               stall_cnt++;
               if (stall_cnt > 16) begin
                 break;

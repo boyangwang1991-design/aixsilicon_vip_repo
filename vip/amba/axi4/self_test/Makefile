@@ -38,7 +38,7 @@ TOP       := axi4_smoke_tb
 # ---- 工具 ----
 PY        ?= uv run python
 
-.PHONY: all unit compile smoke feature corner negative random stress regression full cov clean
+.PHONY: all unit compile smoke feature corner negative random stress regression full cov cov_full clean
 
 all: unit compile
 
@@ -180,19 +180,40 @@ _sim_run_min:
 	echo "PASS: $(UVM_TESTNAME) (UVM_ERROR=$$errs >= MIN=$(MIN_ERRORS))"
 
 # =============================================================================
-# 覆盖率
+# 覆盖率（G4：多 tier 功能覆盖 + merge + 报告）
+#   cov       : smoke 基线（快速）
+#   cov_full  : smoke+feature+corner+negative+random+stress 全 tier 采样 → merge → 汇总
 # =============================================================================
+COV_OPTS  := -cm line+cond+tgl+assert -cm_dir $(SIM_DIR)/cov
+
 cov: compile
-	@echo "=== collect axi4 coverage ==="
-	$(SIM_DIR)/simv +UVM_TESTNAME=axi4_smoke_test -cm line+cond+tgl+assert \
-		-cm_name axi4_cov -l $(LOG_DIR)/cov.log
+	@echo "=== collect axi4 coverage (smoke baseline) ==="
+	$(SIM_DIR)/simv +UVM_TESTNAME=axi4_smoke_test $(COV_OPTS) \
+		-cm_name axi4_cov_smoke -l $(LOG_DIR)/cov.log
 	@echo "覆盖率报告: $(LOG_DIR)/cov.log"
+
+cov_full: compile
+	@echo "=== collect axi4 coverage (full 6-tier functional merge) ==="
+	mkdir -p $(SIM_DIR)/cov
+	@for t in smoke feature corner negative random stress; do \
+		$(SIM_DIR)/simv +UVM_TESTNAME=axi4_$${t}_test $(COV_OPTS) \
+			-cm_name axi4_cov_$${t} -l $(LOG_DIR)/cov_$${t}.log || exit 1; \
+	done
+	$(UVM_HOME)/../../../bin/urg -dir $(SIM_DIR)/cov/axi4_cov_*.vdb -report $(SIM_DIR)/cov/merged_report \
+		> $(LOG_DIR)/cov_merge.log 2>&1 || \
+		( echo "WARN: urg 不可用/失败，见 $(LOG_DIR)/cov_merge.log；vdb 已保留于 $(SIM_DIR)/cov/" )
+	@echo "=== 功能覆盖（各 tier summary，取自 sim log）==="
+	@for t in smoke feature corner negative random stress; do \
+		echo "[$$t]"; \
+		grep -E "coverage.*access=|Covergroup Coverage|Summary" $(LOG_DIR)/cov_$${t}.log | tail -3; \
+	done
+	@echo "合并报告: $(SIM_DIR)/cov/merged_report（若 urg 可用）；vdb: $(SIM_DIR)/cov/"
 
 # =============================================================================
 # 清理
 # =============================================================================
 clean:
-	rm -rf $(SIM_DIR) $(LOG_DIR) simv simv.daidir csrc ucli.key *.vpd *.fsdb
+	rm -rf $(SIM_DIR) $(LOG_DIR) simv simv.daidir csrc ucli.key *.vpd *.fsdb *.vdb
 
 $(SIM_DIR):
 	mkdir -p $(SIM_DIR)
