@@ -62,6 +62,14 @@ class axi4_item extends uvm_sequence_item;
   rand int response_delay[];
 
   // ===========================================================================
+  // 注入控制（per-transaction；driver 优先取 item 级，回退 driver 全局钩子）
+  //   inject_early_wlast     : 倒数第 2 拍提前 WLAST（burst 缩短，RUL-017）
+  //   inject_unstable_payload: W stalled 期翻转 wdata/wstrb（RUL-011）
+  // ===========================================================================
+  rand bit inject_early_wlast;
+  rand bit inject_unstable_payload;
+
+  // ===========================================================================
   // 内部状态（事件：address/write_data/response 的 begin/end）
   // ===========================================================================
   protected bit  address_began;
@@ -112,6 +120,8 @@ class axi4_item extends uvm_sequence_item;
     strobe            = new[1];
     response          = new[0];
     has_response      = 1;
+    inject_early_wlast     = 0;
+    inject_unstable_payload = 0;
     start_delay       = 0;
     address_ready_delay = 0;
     response_start_delay = 0;
@@ -229,6 +239,10 @@ class axi4_item extends uvm_sequence_item;
 
   function bit is_write_data_began();
     return write_data_began;
+  endfunction
+
+  function bit write_data_ended_status();
+    return write_data_ended;
   endfunction
 
   function bit response_ended_status();

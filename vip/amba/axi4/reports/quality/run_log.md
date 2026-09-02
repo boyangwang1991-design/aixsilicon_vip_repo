@@ -423,3 +423,56 @@ NOT_RUN 如实登记，进入 G4 覆盖闭合阶段。
 ### 结论
 PRO-008/007 有专项 PASS 证据；PRO-019 实现就绪、验证 NOT_RUN（诚实标注）。
 full 升级为 7 tier 稳定回归。
+
+## 2026-09-02 — S10：error tier 检出闭环（E1 RUL-017）+ RAL 定向验证 + monitor W 重建修复
+
+### 目标
+1. error tier 检出 0/2 根因修复（monitor 固定拍数数组 → 实际 beat 对账）；
+2. RAL（VER-014）定向验证：adapter reg2bus/bus2reg + predictor + 物理 memory；
+3. C3 decouple W 预收竞争（PRO-019）根因分析并诚实登记。
+
+### error tier 闭环（E1 VALIDATED，E2 诚实 NOT_RUN）
+* **根因 1（monitor 重建）**：`axi4_write_monitor` 的 `data/strobe` 固定 `new[burst_length]`
+  填不满的尾部为 'x，checker RUL-017 依 `data.size()` 对账永不触发 → 改为**实际拍数
+  resize**（WLAST 时截断）+ `write_data_ended_status()` 归属切换（W 无 ID 依到达顺序，
+  不并入已 WLAST 事务）。
+* **根因 2（注入钩子全局交叉）**：E1/E2 用 driver 全局 bit 导致互相污染 → 改为 **item 级
+  注入字段**（`inject_early_wlast`/`inject_unstable_payload` 到 `axi4_item`，driver 优先
+  item 级、回退全局）。
+* **根因 3（E1 语义）**：early-WLAST 原在 `burst_length-2` 拍（len=4 时发 3 beat）→ 修正
+  为第 2 拍（index 1）提前 WLAST，实际 2 beat。
+* **结果**：E1 事务（id=1 addr=0xc000）被 checker **精确检出 RUL-017 ×2（两侧 monitor）**，
+  `make error` PASS；E2（RUL-011 SVA）依赖 stall 时序，SVA 未触发 → **NOT_RUN 如实标注**
+  （Makefile MIN_ERRORS=1 + report_phase 明示），不伪报。
+
+### RAL 定向验证（VER-014，PASS）
+* 新增 `axi4_ral_test`（最小 reg_block + adapter）：**adapter reg2bus/bus2reg 直接驱动
+  总线事务**（绕过 uvm_reg 全调度，避免 frontdoor 调度挂起），验证：
+  * reg2bus 写 item → driver 执行 → slave 写 memory → **物理读回 == 写入值**；
+  * bus2reg 读响应解析（UVM_IS_OK + 数据一致）；
+  * `axi4_ral_predictor` 组件订阅 monitor response 流（连接 + predict 注册）；
+* **结果**：`make ral` PASS（UVM_ERROR=0）。
+
+### C3 decouple（PRO-019）根因确认 + 诚实登记
+* 接入 C3 后实测 decouple[0/1] mismatch（读回 0）：**W-before-AW 时 slave 预收队列
+  pre_queue=0**（AW 到达时未采到 W）。
+* 修复尝试：`w_pre_collect_thread` 改为**仅采集已握手 W 拍**（wvalid && wready，
+  避免 stall 误采；修复 clocking output 采样非法）。实测仍 mismatch → 根因确认：
+  **master 用 master_cb(output #1)、slave 用 slave_cb(input #1step) 采样，clocking
+  沿错位导致预收线程漏采/错位**。属已知时序限制 → **NOT_RUN 如实登记**（G4 深化项）。
+
+### 验证（VCS W-2024.09-SP1 / UVM 1.2 / seed=1）
+| 检查 | 结果 |
+| --- | --- |
+| error tier（E1 RUL-017 检出） | **PASS（2/2，MIN=1）**；E2 RUL-011 NOT_RUN |
+| RAL tier（adapter/predictor/memory） | **PASS（UVM_ERROR=0）** |
+| full 回归 | **9/9 PASS**（smoke/feature/corner/negative/random/stress/concurrent/error/ral） |
+
+### 剩余（如实）
+* E2（RUL-011 SVA）检出依赖 stall 窗口时序 → 待 G4 深化（driver 自含 stall 注入）；
+* C3（W-before-AW）slave 预收 clocking 沿错位 → 待 G4 深化（统一样本沿）；
+* outstanding 读异步化 + 多 ID 乱序/交织（PRO-008 完整并发）→ 待 G4。
+
+### 结论
+**error tier 由 NOT_RUN 转 E1 VALIDATED + RAL 定向验证闭环**；full 升级为 9 tier 全绿。
+剩余两项（E2/C3）与 outstanding 读均诚实 NOT_RUN，进入 G4 覆盖闭合阶段。

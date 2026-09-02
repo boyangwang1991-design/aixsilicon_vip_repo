@@ -130,7 +130,13 @@ class axi4_master_driver extends uvm_driver #(axi4_master_item);
   endtask
 
   protected task drive_write_data(axi4_master_item item);
+    bit do_early_wlast;
+    bit do_unstable;
     vif.master_cb.wvalid <= 0;
+    // 注入钩子：item 级优先（per-transaction，sequence 可独立控制 E1/E2），
+    // 回退 driver 全局 bit（负面 test 批量注入时仍可用）。
+    do_early_wlast = inject_early_wlast | item.inject_early_wlast;
+    do_unstable    = inject_unstable_payload | item.inject_unstable_payload;
     if (item.is_write()) begin
       for (int i = 0; i < item.burst_length; i++) begin
         if (cfg.write_data_delay.get_delay() > 0) begin
@@ -141,12 +147,17 @@ class axi4_master_driver extends uvm_driver #(axi4_master_item);
         vif.master_cb.wdata  <= (i < item.data.size())   ? item.data[i]   : '0;
         vif.master_cb.wstrb  <= (i < item.strobe.size()) ? item.strobe[i] : '1;
         // WLAST 判定（注入钩子，默认合法：仅末拍拉 WLAST）
-        if (inject_early_wlast && (i == item.burst_length - 2)) begin
-          // RUL-017/RUL-005 负向：倒数第 2 拍提前拉 WLAST 并终止 burst（缩短）
+        // early-WLAST 语义：第 2 拍（index 1）就拉 WLAST 并终止 burst → 实际
+        // 发 2 beat（len>=4 时）而非"倒数第 2 拍"（len=4 时 index=2 已发 3 拍）。
+        if (do_early_wlast && (i == 1)) begin
+          // RUL-017/RUL-005 负向：第 2 拍提前拉 WLAST 并终止 burst（缩短为 2 beat）
           vif.master_cb.wlast <= 1;
           do @(vif.master_cb); while (!(vif.master_cb.wready === 1'b1));
           vif.master_cb.wvalid <= 0;
           vif.master_cb.wlast  <= 0;
+          `uvm_info(get_type_name(),
+            $sformatf("EARLY_WLAST injected @addr=0x%0h len=%0d → 实际 2 beat 后 WLAST（缩短）",
+                      item.address, item.burst_length), UVM_LOW)
           item.end_write_data();
           return;
         end
@@ -157,8 +168,11 @@ class axi4_master_driver extends uvm_driver #(axi4_master_item);
         else begin
           vif.master_cb.wlast <= (i == item.burst_length - 1);
         end
-        // RUL-011 负向：等待 READY 期间翻转 payload（stall 后 wdata/wstrb 变化）
-        if (inject_unstable_payload) begin
+        // RUL-011 负向：等待 READY 期间翻转 payload。
+        // 语义：wvalid=1 已置位（上方），若本拍 wready=0（stall），fork
+        // 在下一沿翻转 wdata/wstrb（此时 wdata 变化且前拍是 stall），
+        // 使 SVA (wvalid && !wready) |=> (payload != $past(payload)) 触发。
+        if (do_unstable) begin
           fork
             begin
               @(vif.master_cb);
@@ -170,6 +184,7 @@ class axi4_master_driver extends uvm_driver #(axi4_master_item);
           join_none
         end
         do @(vif.master_cb); while (!(vif.master_cb.wready === 1'b1));
+        disable fork;
         disable fork;
       end
       vif.master_cb.wvalid <= 0;
@@ -433,9 +448,14 @@ class axi4_slave_driver extends uvm_driver #(axi4_slave_item);
   protected axi4_strobe w_pre_strb[$];
 
   protected task w_pre_collect_thread();
+    // 仅采集"已握手"的 W 拍（wvalid && wready）：AXI 传输以两者同时为高为准。
+    // 旧实现只看 wvalid，在 W 被 stall（wready=0）时会误采未握手拍 → 数据错位。
+    // wready 是 slave 自己驱动的 clocking output，回读采样非法 → 读接口顶层信号。
     forever begin
       @(vif.slave_cb);
-      if (vif.slave_cb.wvalid === 1'b1) begin
+      if ((vif.slave_cb.wvalid === 1'b1) &&
+          (vif.wready === 1'b1) &&
+          !$isunknown(vif.slave_cb.wdata)) begin
         w_pre_data.push_back(vif.slave_cb.wdata);
         w_pre_strb.push_back(vif.slave_cb.wstrb);
       end

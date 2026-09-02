@@ -216,9 +216,10 @@ class axi4_concurrent_test extends uvm_test;
     seq2.start(env.master_agent.sequencer);
     #50;
 
-    // C3 W-before-AW 解耦形态：driver `decouple_w_before_aw` 已实现（PRO-019），
-    // 但 slave 侧 W 预收与 AW 采样的线程竞争需 G4 调试闭环 → 本轮 NOT_RUN
-    // （seq3 定义保留，待验证后接入；run_log S09 如实登记）
+    // C3 W-before-AW 解耦（PRO-019）：driver `decouple_w_before_aw` 已实现，
+    // slave 侧已修复"预收仅采集握手 W 拍"（wready 判定），但 master 用
+    // master_cb(output #1) 驱动、slave 用 slave_cb(input #1step) 采样，
+    // clocking 沿错位导致预收漏采 → 本轮 NOT_RUN，run_log S10 如实登记。
 
     phase.drop_objection(this);
   endtask

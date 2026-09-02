@@ -100,6 +100,9 @@ virtual class axi4_write_monitor extends axi4_monitor_base;
         item.qos          = vif.awqos;
         item.region       = vif.awregion;
         item.lock         = vif.awlock;
+        // data/strobe 初始为 burst_length 个 'x 占位；实际收到的 W beat 由
+        // wdata_index_advance 逐个填充。early-WLAST/缩短注入时实际 beat 数
+        // < burst_length（尾部仍为 'x），checker RUL-017 依非-'x 拍数对账。
         item.data         = new[item.burst_length];
         item.strobe       = new[item.burst_length];
         item.response     = new[0];
@@ -111,29 +114,67 @@ virtual class axi4_write_monitor extends axi4_monitor_base;
   endtask
 
   // 采样写数据通道（WVALID && WREADY）
+  // W 无 ID：依到达顺序归属下一笔"W 阶段未结束"的写事务。
+  // early-WLAST/缩短时：WLAST 提前到达 → 该笔 data resize 为实际拍数并结束 W；
+  // 后续 W 归属下一笔（跳过已结束项，但**不 delete**——store 项须保留至 B 匹配删除，
+  // 否则 B 到达时 find_address_store 匹配失败 → orphan，事务丢失）。
   protected task sample_write_data();
-    int wdata_index[$];
+    axi4_item item;
+    int widx;
     forever begin
       @(posedge vif.aclk);
       if (vif.wvalid && vif.wready && !$isunknown(vif.wdata)) begin
-        // 写数据按 AW 顺序（gapped write data 由地址暂存匹配；W 无 ID，
-        // 按 W 数据到达顺序写入第一笔未完成的写事务）
-        if (address_stores.size() > 0) begin
-          axi4_item item = address_stores[0];
-          // 找到第一个 W 数据未收满的 item
-          item.data[wdata_index_advance(item)]   = vif.wdata;
-          item.strobe[wdata_index_advance(item)] = vif.wstrb;
-          if (vif.wlast) begin
-            item.end_write_data();
+        if (address_stores.size() == 0) begin
+          continue;
+        end
+        // 找第一笔 W 阶段未结束的写事务（跳过已 WLAST 的，但保留在 store）
+        item = null;
+        foreach (address_stores[i]) begin
+          if (address_stores[i] != null && !(address_stores[i].write_data_ended_status())) begin
+            item = address_stores[i];
+            break;
           end
+        end
+        if (item == null) begin
+          // 所有事务 W 均已结束（合法 0 数据等异常）
+          continue;
+        end
+        widx = wdata_index_advance(item);
+        if (widx < 0 || widx >= item.burst_length) begin
+          // 该笔已收满（合法 burst 完成）且未 WLAST：跳过，等待下一拍决策
+          continue;
+        end
+        item.data[widx]   = vif.wdata;
+        item.strobe[widx] = vif.wstrb;
+        if (vif.wlast) begin
+          // WLAST：该笔 W 阶段结束 → resize 到实际拍数（截掉尾部 'x）
+          begin
+            axi4_data dtmp[];
+            axi4_strobe stmp[];
+            dtmp = new[widx + 1];
+            stmp = new[widx + 1];
+            foreach (item.data[i]) begin
+              if (i <= widx) begin
+                dtmp[i] = item.data[i];
+                stmp[i] = item.strobe[i];
+              end
+            end
+            item.data   = dtmp;
+            item.strobe = stmp;
+          end
+          item.end_write_data();
         end
       end
     end
   endtask
 
   protected function int wdata_index_advance(axi4_item item);
-    // 返回下一个 W 数据索引；简单实现：当前 item 已收数据数
+    // 返回下一个空闲 W 数据索引（0-based）；W 阶段已结束 → -1；
+    // 已收满（无 'x、index 达 burst_length）→ -1（等待后续 beat 决策）。
     int idx;
+    if (item == null || item.write_data_ended_status()) begin
+      return -1;
+    end
     idx = item.burst_length;
     foreach (item.data[i]) begin
       if (item.data[i] === 'x) begin
@@ -141,7 +182,11 @@ virtual class axi4_write_monitor extends axi4_monitor_base;
         break;
       end
     end
-    return (idx == item.burst_length) ? 0 : idx;
+    if (idx >= item.burst_length) begin
+      // 全部已填（合法 burst 未 WLAST 前不应出现；防御返回 -1 避免越界写）
+      return -1;
+    end
+    return idx;
   endfunction
 
   // 采样写响应通道（BVALID && BREADY）
