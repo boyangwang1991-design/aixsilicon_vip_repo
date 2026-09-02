@@ -390,3 +390,36 @@ AXI4 运行经验已按 AGENT.md「skill-repo 优先 + 重新物化」原则回�
 **L1 Unit Test 机制双落地（skill 标准 + axi4 实现 79/79）**；VIP 本体按 architecture
 补齐 outstanding 写/背压/response policy/RAL/注入钩子；6 tier 全绿无回退。error tier
 NOT_RUN 如实登记，进入 G4 覆盖闭合阶段。
+
+## 2026-09-02 — S09：AW/W 解耦驱动（PRO-019）+ concurrent tier（多 ID/outstanding）
+
+### 目标
+按 requirement/architecture 继续：PRO-019 解耦驱动形态；PRO-008/007 多 ID/outstanding
+专项测试。
+
+### 完成内容
+1. **PRO-019 W-before-AW 驱动形态**：master driver `decouple_w_before_aw` 开关——
+   写路径按形态先 W 后 AW（默认仍 AW-before-W）。
+2. **slave W 预收队列**：`w_pre_collect_thread` 后台持续吸收 wvalid 拍 +
+   `wait_for_write_request` 队列优先消化——解耦场景数据不丢的结构准备。
+3. **concurrent tier（`axi4_concurrent_test`，纳入 full）**：
+   * C1 多 ID 交替写读回环（ID=0..N 特征值校验）→ PASS；
+   * C2 outstanding 写流水（连续 5 写 + 统一读回）→ PASS；
+   * C3 W-before-AW 解耦回环 → **NOT_RUN**：slave 侧 W 预收线程与 AW 采样主循环的
+     clocking 事件竞争（W 拍归属错位/丢失），需 per-beat 所有权仲裁（G4 深化）；
+     driver 实现保留，测试场景注释保留待接入。
+
+### 验证（VCS W-2024.09-SP1 / UVM 1.2 / seed=1）
+| 检查 | 结果 |
+| --- | --- |
+| unit test | 79/79 PASS |
+| full 回归（7 tier，含 concurrent） | **7/7 PASS** |
+
+### 剩余（如实）
+* C3 decouple 回环：slave W 预收/AW 采样竞争仲裁 → G4；
+* error tier 检出闭环（同前）→ G4；
+* outstanding 读异步化（当前读同步，R 依赖 rdata）→ 多 ID 乱序/交织的完整并发 → G4。
+
+### 结论
+PRO-008/007 有专项 PASS 证据；PRO-019 实现就绪、验证 NOT_RUN（诚实标注）。
+full 升级为 7 tier 稳定回归。

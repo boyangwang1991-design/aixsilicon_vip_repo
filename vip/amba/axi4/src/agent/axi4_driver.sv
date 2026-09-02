@@ -28,6 +28,13 @@ class axi4_master_driver extends uvm_driver #(axi4_master_item);
   bit inject_missing_wlast;
   bit inject_unstable_payload;
 
+  // ===========================================================================
+  // AW/W 解耦驱动形态（PRO-019）：
+  //   0 = AW before W（默认，AXI 常规顺序）
+  //   1 = W before AW（数据先于地址；验证 slave/monitor 的解耦重建）
+  // ===========================================================================
+  bit decouple_w_before_aw;
+
   `uvm_component_utils(axi4_master_driver)
 
   function new(string name = "axi4_master_driver", uvm_component parent = null);
@@ -35,6 +42,7 @@ class axi4_master_driver extends uvm_driver #(axi4_master_item);
     inject_early_wlast      = 0;
     inject_missing_wlast    = 0;
     inject_unstable_payload = 0;
+    decouple_w_before_aw    = 0;
   endfunction
 
   function void build_phase(uvm_phase phase);
@@ -299,15 +307,23 @@ class axi4_master_driver extends uvm_driver #(axi4_master_item);
     forever begin
       axi4_master_item item;
       seq_item_port.get_next_item(item);
-      drive_address(item);
       if (item.is_write()) begin
-        drive_write_data(item);
+        if (decouple_w_before_aw) begin
+          // PRO-019：W before AW 形态——数据先于地址（解耦重建验证）
+          drive_write_data(item);
+          drive_address(item);
+        end
+        else begin
+          drive_address(item);
+          drive_write_data(item);
+        end
         // 写：请求阶段完成即 item_done，B 由后台线程收取（outstanding 并发）
         outstanding_wr.push_back(item);
         item.has_response = 0;
         seq_item_port.item_done();
       end
       else begin
+        drive_address(item);
         // 读：同步收取 R（sequence 依赖 rdata）
         receive_read_response(item);
         seq_item_port.item_done();
@@ -409,7 +425,24 @@ class axi4_slave_driver extends uvm_driver #(axi4_slave_item);
     return AXI4_DECODE_ERROR;
   endfunction
 
-  // 等待写事务完整到达（AW + 全部 W 数据）
+  // ===========================================================================
+  // W 预收队列（PRO-019 解耦）：后台线程持续吸收先于 AW 到达的 W 拍，
+  // wait_for_write_request 优先从队列取（W before AW 数据不丢）
+  // ===========================================================================
+  protected axi4_data   w_pre_data[$];
+  protected axi4_strobe w_pre_strb[$];
+
+  protected task w_pre_collect_thread();
+    forever begin
+      @(vif.slave_cb);
+      if (vif.slave_cb.wvalid === 1'b1) begin
+        w_pre_data.push_back(vif.slave_cb.wdata);
+        w_pre_strb.push_back(vif.slave_cb.wstrb);
+      end
+    end
+  endtask
+
+  // 等待写事务完整到达（AW + 全部 W 数据；支持 W-before-AW 预收）
   protected task wait_for_write_request(ref axi4_item item);
     axi4_payload_store store;
     axi4_payload_store wdata_store;
@@ -439,18 +472,24 @@ class axi4_slave_driver extends uvm_driver #(axi4_slave_item);
         req.data         = new[0];
         req.strobe       = new[0];
         item = req;
-        // 采样全部 W 数据；W 停发 16 拍 → 强制完成（缩短容错，
+        // 消化预收队列（W-before-AW 已到数据）
+        while ((data.size() < item.burst_length) && (w_pre_data.size() > 0)) begin
+          data.push_back(w_pre_data.pop_front());
+          strobe.push_back(w_pre_strb.pop_front());
+        end
+        // 采样其余 W 数据：预收队列优先（预收线程是唯一采集者，
+        // 避免双采集竞争）；W 停发 16 拍 → 强制完成（缩短容错，
         // monitor 重建拍数与 awlen 不一致 → checker RUL-007 检出）
         begin
           int stall_cnt;
           stall_cnt = 0;
           while (data.size() < item.burst_length) begin
-            @(vif.slave_cb);
-            if (vif.slave_cb.wvalid === 1'b1) begin
-              data.push_back(vif.slave_cb.wdata);
-              strobe.push_back(vif.slave_cb.wstrb);
+            if (w_pre_data.size() > 0) begin
+              data.push_back(w_pre_data.pop_front());
+              strobe.push_back(w_pre_strb.pop_front());
             end
             else begin
+              @(vif.slave_cb);
               stall_cnt++;
               if (stall_cnt > 16) begin
                 break;
@@ -565,6 +604,9 @@ class axi4_slave_driver extends uvm_driver #(axi4_slave_item);
     reset_signals();
     @(posedge vif.aclk iff (vif.areset_n === 1'b1));
     backpressure_proc();
+    fork
+      w_pre_collect_thread();
+    join_none
     fork
       // 写路径：等 AW + W，发 B（resp status 按 policy 权重选择）
       begin

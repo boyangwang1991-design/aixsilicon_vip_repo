@@ -3,7 +3,18 @@
 所有显著变更记录于此。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本遵循 SemVer。
 
-## [Unreleased] — 1.0.0（developing，G3 主体完成 + L1 Unit Test 层）
+## [Unreleased] — 1.0.0（developing，G3 主体完成 + L1 Unit Test 层 + concurrent tier）
+
+### Added（2026-09-02 S09）
+
+* **concurrent tier（`axi4_concurrent_test`，纳入 full → 7 tier）**：
+  多 ID 交替写读回环（PRO-008）+ outstanding 写流水（PRO-007）双场景 PASS。
+* **PRO-019 W-before-AW 驱动形态**：master driver `decouple_w_before_aw` 开关 +
+  slave W 预收队列（`w_pre_collect_thread`）；回环验证 NOT_RUN（slave 侧 W/AW
+  采样竞争需 G4 仲裁，实现保留）。
+* full 回归升级为 **7/7 PASS**。
+
+### Added（2026-09-02 S08）
 
 ### Added（2026-09-02 S08）
 

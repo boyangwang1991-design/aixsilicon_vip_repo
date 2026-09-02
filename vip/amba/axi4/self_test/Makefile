@@ -122,18 +122,25 @@ error: compile
 	@echo "=== RUN axi4 error (timing injection) ==="
 	$(MAKE) _sim_run_min UVM_TESTNAME=axi4_error_test MIN_ERRORS=2
 
+# concurrent tier：多 ID 写读（PRO-008）+ outstanding 写流水（PRO-007）+
+# W-before-AW 解耦（PRO-019）；合法空间 0 违规
+concurrent: compile
+	@echo "=== RUN axi4 concurrent (multi-id/outstanding/decouple) ==="
+	$(MAKE) _sim_run UVM_TESTNAME=axi4_concurrent_test ALLOW_ERRORS=0
+
 regression: full
 
-# full = 6 tier 稳定回归；error tier（RUL-017 monitor 对账）调试中，独立 target：
+# full = 7 tier 稳定回归（含 concurrent）；error tier 检出路径调试中，独立 target：
 #   make -C self_test error   # NOT_RUN 状态：检出路径待 monitor 重建调试（run_log S08）
 full: compile
-	@echo "=== RUN axi4 full regression (6 tests) ==="
+	@echo "=== RUN axi4 full regression (7 tests) ==="
 	$(MAKE) _sim_run UVM_TESTNAME=axi4_smoke_test ALLOW_ERRORS=0
 	$(MAKE) _sim_run UVM_TESTNAME=axi4_feature_test ALLOW_ERRORS=0
 	$(MAKE) _sim_run UVM_TESTNAME=axi4_corner_test ALLOW_ERRORS=1
 	$(MAKE) _sim_run UVM_TESTNAME=axi4_negative_test ALLOW_ERRORS=4
 	$(MAKE) _sim_run UVM_TESTNAME=axi4_random_test ALLOW_ERRORS=0
 	$(MAKE) _sim_run UVM_TESTNAME=axi4_stress_test ALLOW_ERRORS=0
+	$(MAKE) _sim_run UVM_TESTNAME=axi4_concurrent_test ALLOW_ERRORS=0
 
 # 单测试运行入口（make _sim_run UVM_TESTNAME=<name> ALLOW_ERRORS=<expected>）
 # 判定：UVM_ERROR 计数 == ALLOW_ERRORS 且 UVM_FATAL == 0 → PASS
