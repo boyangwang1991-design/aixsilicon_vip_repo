@@ -38,7 +38,7 @@ TOP       := axi4_smoke_tb
 # ---- 工具 ----
 PY        ?= uv run python
 
-.PHONY: all unit compile smoke feature corner negative random stress regression full cov cov_full clean
+.PHONY: all unit compile smoke feature corner negative random stress regression full cov cov_full passive clean
 
 all: unit compile
 
@@ -139,6 +139,15 @@ ral: compile
 rul: compile
 	@echo "=== RUN axi4 RUL 专项 (M1 valid-drop + M2 missing-WLAST) ==="
 	$(MAKE) _sim_run_min UVM_TESTNAME=axi4_rul_test MIN_ERRORS=3
+
+# PASSIVE/timeout 专项（P2-2）：suppress_r 构造 R 超时窗口 → master timeout 检出；
+# 检出判定：日志含 "R 响应超时" ≥1（grep 兜底）且 test report 无 FATAL
+passive: compile
+	@echo "=== RUN axi4 PASSIVE/timeout 专项 ==="
+	$(MAKE) _sim_run UVM_TESTNAME=axi4_passive_test ALLOW_ERRORS=1
+	@grep -q "R 响应超时" $(LOG_DIR)/axi4_passive_test.log && \
+		echo "PASS: timeout 检出确认（R 响应超时 ≥1）" || \
+		( echo "FAIL: timeout 未检出"; exit 1 )
 
 regression: full
 

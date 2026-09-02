@@ -631,3 +631,30 @@ P2-1 的**注入钩子 + 检测器 + 测试骨架就位**；M1/M2 场景闭环�
 ### 结论
 **M1 闭环 + 文档/资产三件套交付**；RUL 专项已闭环注入 8 类全检出（检测率 100%），
 剩余 7 类（FI-009~015）待 G4 注入实现。full 9/9 稳定回归保持。
+
+## 2026-09-02 — S15：P2-2 timeout 专项闭环 ✅（suppress_r 测试控制机制）
+
+### 完成
+1. **`axi4_if.suppress_r` 测试控制信号**（默认 0）：置 1 时 slave driver
+   `drive_read_response` 直接 return（不发 R）——构造 master R 超时窗口；
+2. **timeout 路径接通验证**（`axi4_passive_test`，复用 smoke_tb）：
+   运行期置 `enable_timeout=1 / timeout_cycles=500` → suppress_r=1 期间发起读 →
+   **master "R 响应超时" 检出 ×1**（driver timeout 分支首次真实触发）→
+   suppress 解除后回环恢复（post-timeout loopback 无 mismatch）；
+3. `make passive` target（ALLOW_ERRORS=1 精确 + grep "R 响应超时" 兜底判定）。
+
+### 说明（PASSIVE 专项口径调整）
+PASSIVE 模式的组件级行为（agent_mode==PASSIVE 时 driver/sequencer 不创建）
+由 agent build 分支保证（代码可审计）；运行期专项以 timeout 路径接通为主验证点，
+test 内含 slave driver 存在性检查。完整 PASSIVE 流量专项待 G4（需 PASSIVE 配置的
+独立 env 构建）。
+
+### 验证
+| 检查 | 结果 |
+| --- | --- |
+| passive tier（timeout 检出 + 恢复回路） | **PASS（UVM_ERROR=1 == expected=1）** |
+| full 回归 | **9/9 PASS** |
+
+### 结论
+**P2-2 timeout 专项闭环**（enable_timeout 路径首次真实触发并检出）；
+测试控制信号机制（suppress_r）建立，为后续负向场景提供通用窗口构造手段。

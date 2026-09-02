@@ -697,6 +697,14 @@ class axi4_slave_driver extends uvm_driver #(axi4_slave_item);
   // 读响应：R 通道（可交织，REQ-009）
   protected task drive_read_response(axi4_item item, axi4_response resp_status);
     axi4_data rdata[];
+    // 测试控制：suppress_r=1 时抑制 R 发送（构造 master R 超时窗口，
+    // timeout 专项用；正常回归恒 0 不影响）
+    if (vif.suppress_r === 1'b1) begin
+      `uvm_info(get_type_name(),
+        $sformatf("R suppressed (suppress_r=1) id=%0d addr=0x%0h — timeout window",
+                  item.id, item.address), UVM_LOW)
+      return;
+    end
     if (memory != null) begin
       rdata = new[item.burst_length];
       // 逐 beat 按 burst_type 计算地址读取（INCR/WRAP/FIXED 均正确；
