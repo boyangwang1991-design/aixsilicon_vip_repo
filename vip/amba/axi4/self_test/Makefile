@@ -150,15 +150,18 @@ passive: compile
 		( echo "FAIL: timeout 未检出"; exit 1 )
 
 # 覆盖 sweep 专项（G4）：strobe/exclusive/len×size/4KB cross 确定性遍历；
-# 预期 RUL-003 检出 ×1（S5 边界跨越）——coverage 采样含于本 sim
+# RUL-003 检出 ≥1（S5 + S3 大 len 自然跨界）；其余规则 0 违规；
+# 判定：所有 UVM_ERROR 均为 RUL-003（4KB）→ 通过；输出 coverage summary
 cov_sweep: compile
 	@echo "=== RUN axi4 coverage sweep (G4 专项激励) ==="
 	$(SIM_DIR)/simv +UVM_TESTNAME=axi4_cov_sweep_test $(COV_OPTS) \
 		-cm_name axi4_cov_sweep -l $(LOG_DIR)/axi4_cov_sweep_test.log +ntb_random_seed=1
-	@errs=$$(grep -oE "UVM_ERROR : *[0-9]+" $(LOG_DIR)/axi4_cov_sweep_test.log | grep -oE "[0-9]+" | tail -1); \
-	if [ "$$errs" != "1" ]; then \
-		echo "FAIL: cov_sweep (UVM_ERROR=$$errs expected=1)"; exit 1; \
+	@non_rul003=$$(grep -E "UVM_ERROR" $(LOG_DIR)/axi4_cov_sweep_test.log | grep -v "RUL-003" | grep -cv "UVM_ERROR :"); \
+	rul003=$$(grep -cE "\[AXI4-REQ-RUL-003\]" $(LOG_DIR)/axi4_cov_sweep_test.log); \
+	if [ "$$non_rul003" != "0" ] || [ "$$rul003" -lt 1 ]; then \
+		echo "FAIL: cov_sweep (non-RUL-003=$$non_rul003 RUL-003=$$rul003)"; exit 1; \
 	fi; \
+	echo "PASS: cov_sweep (RUL-003 检出 $$rul003，0 其它违规)"; \
 	grep -E "axi4_coverage\]" $(LOG_DIR)/axi4_cov_sweep_test.log | tail -1
 
 regression: full

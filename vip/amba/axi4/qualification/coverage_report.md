@@ -14,9 +14,9 @@
 | cg_exclusive | 50% | **100%** | ✅ S2 exclusive 对 |
 | cg_boundary | 50% | **100%** | ✅ S5 4KB cross |
 | cg_burst | 83% | 56%（sweep 单独）| merge 后 ≥83（S3 补 len8/16） |
-| cg_type_response | 29% | 50% | ⚠️ 剩 EXOKAY/DECODE bin |
+| cg_type_response | 29% | **83%** | ⚠️ 剩 EXOKAY bin（S7 SLVERR/DECODE 已中） |
 | cg_size_bus_burst | 30% | 13%（sweep 单独）| merge 后互补 |
-| cg_length_size | 1% | 1% | ⚠️ len16×size 组合待扩 |
+| cg_length_size | 1% | 1% | ⚠️ len16×size 组合已发（S3/S6），bins 巨型需 merge 汇总 |
 
 > sweep 实测（`make cov_sweep`，S17）：**Field 层全 100%**；Cross 层 len_size
 > 仍需 len16×size{1,2,4} 与 type_resp 的 EXOKAY/DECODE 补充（专项已定位）。
@@ -40,17 +40,17 @@
 握手/传输/WLAST/RLAST/payload 稳定/复位 cover **全部命中**（各 tier 日志
 `cover_*_transfer` match>0；error tier 含 RUL-011/RUL-005 违约检出）。
 
-## G4 缺口清单（→ 专项激励计划）
+## G4 缺口清单（S17/S18 sweep 后状态）
 
-| # | 缺口 | 闭环手段 |
-| --- | --- | --- |
-| 1 | cg_strobe 0%（partial/sparse） | feature 增 partial/sparse strobe 序列 |
-| 2 | cg_exclusive 50% | exclusive 读-写对序列（EXOKAY/OKAY 双路径） |
-| 3 | cg_access 50% | monitor 采样通道均衡（read/write 双侧接入） |
-| 4 | cg_boundary 50% | corner 负向 4KB 接入 coverage 通道 |
-| 5 | cg_type_response 29% | EXOKAY（exclusive）/DECODE（地址越界）激励 |
-| 6 | cg_length_size 1% | 专项 len×size 矩阵遍历序列（确定性 sweep） |
-| 7 | urg merge | license 可用时复跑（vdb 已保留） |
+| # | 缺口 | 状态 | 闭环手段 |
+| --- | --- | --- | --- |
+| 1 | cg_strobe 0% | ✅ 已闭合（S1） | 10 shape 遍历 |
+| 2 | cg_exclusive 50% | ✅ 已闭合（S2） | exclusive 对 |
+| 3 | cg_access 50% | ✅ 已闭合（S4） | 读均衡 |
+| 4 | cg_boundary 50% | ✅ 已闭合（S5） | 4KB cross |
+| 5 | cg_type_response 83% | ⚠️ 剩 EXOKAY bin | exclusive 写的 resp 采样通道接入 |
+| 6 | cg_length_size 1% | ⚠️ bins 巨型 | len16 组合已发；merge 汇总后复评 |
+| 7 | urg merge | ⏳ license 不可用 | license 可用时复跑（vdb 已保留） |
 
 ## 指标对照（vip-quality 目标）
 

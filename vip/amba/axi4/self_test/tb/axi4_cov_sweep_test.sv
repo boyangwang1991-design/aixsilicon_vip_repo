@@ -19,10 +19,13 @@ import axi4_types_pkg::*;
 
 class axi4_cov_sweep_seq extends axi4_master_base_seq;
 
+  bit resp_types_phase;   // 1=执行 S7（SLVERR/DECODE 响应 bins；test 分阶段置权重）
+
   `uvm_object_utils(axi4_cov_sweep_seq)
 
   function new(string name = "axi4_cov_sweep_seq");
     super.new(name);
+    resp_types_phase = 0;
   endfunction
 
   // 构造一笔写 item 的辅助
@@ -128,13 +131,29 @@ class axi4_cov_sweep_seq extends axi4_master_base_seq;
     #100;
 
     // ==== S5: 4KB 边界跨越（预期 checker RUL-003 检出 ×1）====
-    `uvm_info(get_type_name(), "S5: 4KB boundary cross (expect RUL-003 detect)", UVM_LOW)
     begin
       axi4_strobe full_stb[];
       full_stb = new[4];
       foreach (full_stb[i]) full_stb[i] = 4'b1111;
       do_write_item(32'h0000_0FFC, 4, 4, AXI4_INCREMENTING_BURST, AXI4_NORMAL_LOCK,
                     full_stb);
+    end
+    #100;
+
+    // ==== S7（resp_types_phase=1 时执行）：SLVERR/DECODE 响应 bins ====
+    // 权重切换由 test 分阶段控制（run_phase 在两段之间改 slave_cfg）；
+    // 本段用 item 级构造（不依赖 cfg），响应类型由 slave policy 决定。
+    if (resp_types_phase) begin
+      axi4_strobe full_stb[];
+      full_stb = new[1];
+      full_stb[0] = 4'b1111;
+      `uvm_info(get_type_name(), "S7: SLVERR/DECODE response bins", UVM_LOW)
+      do_write_item(32'h0004_0000, 1, 4, AXI4_INCREMENTING_BURST,
+                    AXI4_NORMAL_LOCK, full_stb);
+      do_read_item(32'h0004_0000, 1, 4, AXI4_INCREMENTING_BURST, AXI4_NORMAL_LOCK);
+      do_write_item(32'h0004_0100, 1, 4, AXI4_INCREMENTING_BURST,
+                    AXI4_NORMAL_LOCK, full_stb);
+      do_read_item(32'h0004_0100, 1, 4, AXI4_INCREMENTING_BURST, AXI4_NORMAL_LOCK);
     end
     #100;
   endtask
@@ -161,8 +180,26 @@ class axi4_cov_sweep_test extends uvm_test;
     axi4_cov_sweep_seq seq;
     phase.raise_objection(this);
     seq = axi4_cov_sweep_seq::type_id::create("seq");
-    seq.start(env.master_agent.sequencer);
-    #300;
+    seq.start(env.master_agent.sequencer);   // S1~S5
+    #100;
+
+    // S7: SLVERR/DECODE 响应 bins（权重切换 + 同一 seq 的 resp_types_phase 段）
+    if (env.slave_cfg != null) begin
+      env.slave_cfg.response_weight_okay        = 0;
+      env.slave_cfg.response_weight_slave_error = 1;
+    end
+    seq.resp_types_phase = 1;
+    seq.start(env.master_agent.sequencer);   // S7 第一段（SLVERR）
+    if (env.slave_cfg != null) begin
+      env.slave_cfg.response_weight_slave_error  = 0;
+      env.slave_cfg.response_weight_decode_error = 1;
+    end
+    seq.start(env.master_agent.sequencer);   // S7 第二段（DECODE）
+    if (env.slave_cfg != null) begin
+      env.slave_cfg.response_weight_decode_error = 0;
+      env.slave_cfg.response_weight_okay         = 1;   // 恢复默认
+    end
+    #100;
     phase.drop_objection(this);
   endtask
 

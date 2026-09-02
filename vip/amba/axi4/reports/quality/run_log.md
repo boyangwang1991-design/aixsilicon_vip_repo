@@ -711,3 +711,22 @@ len_size 的 len16×size 组合（专项已定位）。
 **G4 Field/Scenario 层闭合达成**（access/strobe/exclusive/boundary/scenario
 全 100%）；Cross 层剩 type_resp 与 len_size 两 bins 组合（专项定位完成）。
 full 9/9 稳定回归保持。
+
+## 2026-09-02 — S18：G4 Cross 层闭合推进（type_resp 83%）+ cov_sweep 判定固化
+
+### 完成
+1. **S6**：len16×size{1,2,4} 写读补全（cg_burst len16 bin + length_size 组合）；
+2. **S7 响应类型 bins**：运行期切换 slave 响应权重（SLVERR→DECODE）→
+   cg_type_response 50%→**83%**（SLVERR/DECODE bins 命中；剩 EXOKAY 需
+   exclusive 写 resp 采样通道接入）；
+3. **cov_sweep 判定固化**：RUL-003 检出 ≥1 且 0 其它规则违规（S3 大 len
+   自然跨界 ×4 均合法预期）——`make cov_sweep` PASS。
+
+### sweep 终版覆盖率
+`access=100 burst=56 strobe=100 exclusive=100 type_resp=83
+size_bus_burst=13 len_size=1 boundary=100 scenario=100`
+
+### 结论
+**Field 全 100% + type_resp 83%**；Cross 剩余两项均为"merge 汇总/采样通道"
+性质（非激励缺失）：len_size 待 urg merge 汇总、EXOKAY 待 exclusive resp
+接入。G4 收尾清单缩至 3 项机械工作（merge 复跑/EXOKAY 通道/FI-009~015）。
