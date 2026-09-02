@@ -3,8 +3,8 @@
 > **Document ID**: `AXI4_RTM_001`
 > **VIP Name**: `axi4`
 > **Protocol / Interface**: `AXI4 / AXI4-Lite`（IHI 0022E）
-> **Version**: `1.0.0`
-> **Status**: `Draft（G3 首轮证据；随 G4/G5 迭代更新）`
+> **Version**: `1.1.0`
+> **Status**: `Draft（G3 主体 + S10~S14 逐项闭环；随 G4/G5 迭代更新）`
 > **Owner**: `aixsilicon_vip_repo`
 > **Requirement Baseline**: [`requirement.md 1.0.0-g0-baseline`](requirement.md)
 > **Architecture Baseline**: [`architecture.md 0.4.0-draft`](architecture.md)
@@ -81,7 +81,21 @@ Checker/SVA/Coverage 列标注实现所在组件与检查规则。
 # 7. Master RTM（必填）
 
 汇总矩阵见 §11（Validation Result Matrix）；类别分表见 §8~§28。整体计数：
-**PASS 59 / PARTIAL 17 / NOT_RUN 16 / N/A 4**（详见 §35）。
+**PASS 59 / PARTIAL 17 / NOT_RUN 16 / N/A 4**（S13 基线；S14 更新见 §35 注记）。
+S10~S14 逐项闭环更新：
+* VER-014 RAL：NOT_RUN → **PASS**（S10 ral tier：adapter reg2bus/bus2reg + predictor
+  + 物理 memory 一致，UVM_ERROR=0）；
+* RUL-017：PARTIAL → **PASS**（S10/S11 error tier E1 early-WLAST 检出 ×2）；
+* RUL-011：PARTIAL → **PASS**（S11 E2 unstable payload SVA 检出 ×4）；
+* PRO-019：PARTIAL → **PASS**（S11 C3 W-before-AW loopback，clocking 同步修复）；
+* PRO-008 outstanding 读：NOT_RUN → **PASS**（S12 C4 async_read multi-id 7 beats）；
+* PRO-009 背压：PASS（error E4 + wready 跨沿拉低修复后 E2 窗口）；
+* FuseSoC core：NOT_RUN → **PASS**（S10 `aixsilicon_vip_axi4_1.0.0.core` 生成+校验）；
+* metadata/vip.yaml：NOT_RUN → **PASS**（S10 交付）；
+* L1 Unit Test：PASS（79/79）；
+* RUL-001/005：PARTIAL → **PASS**（S14 rul tier M1 valid-drop SVA ×1 + M2 missing-WLAST ×2）；
+* RUL-013/014/016：unit 层 PASS（memory golden），总线级专项仍在 G4；
+* RUL-002/006/007/008/009/010/012/015：专项注入待 G4（P2-1 剩余）。
 
 # 8. Requirement-to-Architecture Trace（必填）
 
@@ -115,7 +129,7 @@ Checker/SVA/Coverage 列标注实现所在组件与检查规则。
 | RUL-010 | checker `check_response_rules` |
 | TRN-001~003 | `axi4_item` 字段/helper/compare |
 | VER-001~013 | src/ 各组件 |
-| VER-014 | 未实现（NOT_RUN） |
+| VER-014 | ral/axi4_ral_adapter + predictor（S10 ral tier PASS） |
 
 # 10. Requirement-to-Validation Trace（必填）
 
@@ -159,13 +173,13 @@ Checker/SVA/Coverage 列标注实现所在组件与检查规则。
 | RUL-008 | monitor 重建 | — | 无专项 | NOT_RUN |
 | RUL-009 | reset_signals | a_reset_valid SVA | reset 注入未做 | PARTIAL |
 | RUL-010 | slave OKAY | checker | 非法编码未注入 | PARTIAL |
-| RUL-011 | payload stability | a_payload_stability | 无专项 | PARTIAL |
+| RUL-011 | payload stability | a_wdata/a_wstrb_stable | error E2（SVA ×4 检出） | **PASS** |
 | RUL-012 | memory lane | — | narrow 正向已验 | PARTIAL |
 | RUL-013 | write_beat WSTRB | — | 越界未注入 | PARTIAL |
 | RUL-014 | get_byte_lane | — | unaligned 正向已验 | PARTIAL |
 | RUL-015 | 无 WID FIFO | — | 无专项 | PARTIAL |
 | RUL-016 | memory exclusive | — | 无专项 | PARTIAL |
-| RUL-017 | monitor 闭合 | SVA | 缩短未注入 | PARTIAL |
+| RUL-017 | monitor 闭合 | checker beat 对账 | error E1（×2 检出） | **PASS** |
 
 # 13. Checker Trace（按Profile：C 最核心）
 
@@ -274,8 +288,10 @@ NOT_RUN。死锁：stress 300 事务无 deadlock → PASS。
 
 # 26. RAL Trace（按协议：仅寄存器类总线；其余 N/A）
 
-REQ-VER-014（P1 Required，V1.0 Target）：**NOT_RUN（G6 Release blocker）**；
-若确定 V1.0 不实现，requirement 须先降级 P2 再标 N/A（validation-plan §31 口径）。
+REQ-VER-014（P1 Required，V1.0 Target）：**PASS（S10 闭环）**——
+`src/ral/axi4_ral_adapter.sv`（reg2bus/bus2reg/provides_responses）+
+`axi4_ral_predictor`（frontdoor 预测）+ `self_test/tb/axi4_ral_test.sv`
+（adapter 总线事务 + predictor 订阅 + 物理 memory 一致，UVM_ERROR=0）。
 
 # 27. Debug Capability Trace（按Profile）
 
@@ -396,11 +412,11 @@ reports/
 
 | Gate | 状态 | 结论 |
 | --- | --- | --- |
-| G0/G1/G2 | PASS | 历史冻结 + 编译通过 |
-| G3 | PARTIAL→主体 PASS | 6/6 回归；专项 gap 见 §36 |
-| G4 | NOT_RUN | 覆盖闭合未开始 |
-| G5 | NOT_RUN | qualification 未开始 |
-| G6 | NOT_RUN | RAL/doc/FuseSoC/metadata 未齐 |
+| G0/G1/G2 | PASS | 历史冻结 + 编译 + unit 79/79 |
+| G3 | PASS | full 9/9 tier（含 error/concurrent/ral）；E1+E2 双 VALIDATED |
+| G4 | PARTIAL | 覆盖管道就绪（cov_full）；阈值判定与 RUL 残余专项进行中 |
+| G5 | PARTIAL | qualification 证据包就绪；M1 场景与覆盖阈值待收尾 |
+| G6 | NOT_RUN | release 打包待 G4/G5 全绿 |
 
 **结论：尚不具备 Release（G6）条件。**
 

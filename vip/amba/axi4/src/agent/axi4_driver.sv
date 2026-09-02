@@ -501,7 +501,12 @@ class axi4_slave_driver extends uvm_driver #(axi4_slave_item);
           vif.slave_cb.wready <= 1;
         end
         if (cfg.arready_delay.enabled) begin
-          repeat (cfg.arready_delay.get_delay()) vif.slave_cb.arready <= 0;
+          // 跨沿拉低（与 wready_delay 同款修复；delta 循环无沿间隔恒为 1）
+          repeat (cfg.arready_delay.get_delay()) begin
+            @(vif.slave_cb);
+            vif.slave_cb.arready <= 0;
+          end
+          @(vif.slave_cb);
           vif.slave_cb.arready <= 1;
         end
         @(vif.slave_cb);

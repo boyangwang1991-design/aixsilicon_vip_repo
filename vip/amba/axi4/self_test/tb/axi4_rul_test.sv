@@ -13,9 +13,10 @@ import uvm_pkg::*;
 import axi4_pkg::*;
 import axi4_types_pkg::*;
 
-// M1（valid-drop）依赖 arready stall 与 master/slave 状态机时序精确配合，
-// 当前存在死锁（G4 容错语义待做：未握手 AR 丢弃后可重采）；默认 0 只跑 M2。
-localparam bit ENABLE_M1 = 0;
+// M1（valid-drop）+ M2（missing-WLAST）双注入均 VALIDATED：
+// M1 依赖 arready 跨沿拉低制造 stall 窗口（SVA a_arvalid_stable 检出）；
+// M2 依赖 monitor 收满即终容错（checker RUL-005 wlast_seen 判定）。
+localparam bit ENABLE_M1 = 1;
 
 class axi4_rul_seq extends axi4_master_base_seq;
 

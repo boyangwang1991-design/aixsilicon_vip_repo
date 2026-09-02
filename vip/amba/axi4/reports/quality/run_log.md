@@ -598,3 +598,36 @@ master 读路径异步化：AR 完成即 item_done，R 由独立收集进程回�
 ### 结论
 P2-1 的**注入钩子 + 检测器 + 测试骨架就位**；M1/M2 场景闭环依赖 monitor/slave
 容错语义（收满即终、未握手丢弃重采），列入 G4 深化清单，如实 NOT_RUN 不伪报。
+
+## 2026-09-02 — S14：M1 valid-drop 闭环 ✅ + rtm 同步 + examples/fault_injection 交付
+
+### P3-3b2：M1 valid-drop（RUL-001）闭环 ✅
+* **根因**：`arready_delay` 的 delta 循环（与 wready 同款）→ arready 恒 1 无 stall
+  窗口，撤销分支永不触发。修复为**跨沿拉低**。
+* **结果**：`make rul` PASS——**RUL-001×1（SVA a_arvalid_stable）+ RUL-005×2**，
+  `mutation VALIDATED`；ENABLE_M1=1 固化、MIN=3。
+* known_limitations #1（E2）与 M1 场景缺口均解除。
+
+### P3-1：rtm.md 同步刷新 ✅
+* 状态行 1.1.0（S10~S14 闭环注记）：VER-014/RUL-017/RUL-011/PRO-019/PRO-008 读/
+  PRO-009/FuseSoC/metadata → PASS；Gate 表 G3 PASS（9/9）、G4/G5 PARTIAL、G6 NOT_RUN。
+
+### P3-2：examples/ + fault_injection/ 交付 ✅
+* `examples/axi4_example_top.sv` + README（最小集成示例：if/时钟复位/UVM 配置/
+  config_db 四项/集成要点）；
+* `fault_injection/README.md`：FI-001~015 案例索引（8 类 VALIDATED + 7 类 G4），
+  item 级注入使用方式与检测率（已闭环 100%）。
+
+### 验证
+| 检查 | 结果 |
+| --- | --- |
+| rul tier（M1 RUL-001×1 + M2 RUL-005×2） | **PASS（mutation VALIDATED，MIN=3）** |
+| full 回归 | **9/9 PASS** |
+
+### 剩余（如实）
+* P2-2 PASSIVE/timeout/extension 专项；
+* 覆盖阈值判定（cov_full merge 报告 + coverage-check 统计）。
+
+### 结论
+**M1 闭环 + 文档/资产三件套交付**；RUL 专项已闭环注入 8 类全检出（检测率 100%），
+剩余 7 类（FI-009~015）待 G4 注入实现。full 9/9 稳定回归保持。
