@@ -563,11 +563,13 @@ class axi4_slave_driver extends uvm_driver #(axi4_slave_item);
 
     store = new;
     done = 0;
-    // 统一采样沿：@(posedge aclk) + 顶层信号（与 w_pre_collect_thread 对齐，
-    // 消除 slave_cb input#1step 与 master_cb output#1 的沿错位 → C3 修复）
+    // slave_cb（input #1step）采样：master output#1 驱动后的稳定值。
+    // 注：P0-2 曾改 posedge+顶层——posedge 时刻 output#1 尚未更新（读到旧值），
+    // M2 的 AW 恰逢相位错位漏采 → slave 不发 B（cover_b=0 证据）；已回退。
+    // C3 的正确修复是 master 侧 drive_write_data 开头补 @(master_cb) 同步。
     while (!done) begin
-      @(posedge vif.aclk);
-      if (vif.awvalid === 1'b1) begin
+      @(vif.slave_cb);
+      if (vif.slave_cb.awvalid === 1'b1) begin
         // 采样 AW（req 在 task 顶部声明，避免 VCS 嵌套 block 声明解析问题）
         req = axi4_item::type_id::create("req");
         req.access_type = AXI4_WRITE_ACCESS;
@@ -601,7 +603,7 @@ class axi4_slave_driver extends uvm_driver #(axi4_slave_item);
               strobe.push_back(w_pre_strb.pop_front());
             end
             else begin
-              @(posedge vif.aclk);
+              @(vif.slave_cb);
               stall_cnt++;
               if (stall_cnt > 16) begin
                 break;

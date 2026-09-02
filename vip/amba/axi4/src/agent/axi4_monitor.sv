@@ -147,6 +147,7 @@ virtual class axi4_write_monitor extends axi4_monitor_base;
         item.data[widx]   = vif.wdata;
         item.strobe[widx] = vif.wstrb;
         if (vif.wlast) begin
+          item.wlast_seen = 1;   // RUL-005 检测依据（missing-WLAST 判定）
           // WLAST：该笔 W 阶段结束 → resize 到实际拍数（截掉尾部 'x）
           begin
             axi4_data dtmp[];
@@ -164,13 +165,21 @@ virtual class axi4_write_monitor extends axi4_monitor_base;
           end
           item.end_write_data();
         end
+        else if (widx == item.burst_length - 1) begin
+          // 容错"收满即终"（P3-3b）：最后一拍已填但无 WLAST（missing-WLAST
+          // 注入/协议违规）→ 立即结束该笔 W 阶段，后续 W 归属下一笔；
+          // 缺失违规由 checker RUL-005 检测器依 wlast_seen==0 判定。
+          item.end_write_data();
+        end
       end
     end
   endtask
 
   protected function int wdata_index_advance(axi4_item item);
-    // 返回下一个空闲 W 数据索引（0-based）；W 阶段已结束 → -1；
-    // 已收满（无 'x、index 达 burst_length）→ -1（等待后续 beat 决策）。
+    // 返回下一个空闲 W 数据索引（0-based）；W 阶段已结束 → -1。
+    // 容错"收满即终"（P3-3b）：数据收满 burst_length 而无 WLAST（missing-WLAST
+    // 注入/协议违规）时，立即结束该笔 W 阶段——后续 W 归属下一笔（不连锁吞并）；
+    // 缺 WLAST 本身由 checker RUL-005 检测器依 wlast_seen 标志判定。
     int idx;
     if (item == null || item.write_data_ended_status()) begin
       return -1;
@@ -183,7 +192,8 @@ virtual class axi4_write_monitor extends axi4_monitor_base;
       end
     end
     if (idx >= item.burst_length) begin
-      // 全部已填（合法 burst 未 WLAST 前不应出现；防御返回 -1 避免越界写）
+      // 收满但无 WLAST：容错收满即终（RUL-005 违规由 checker 判定）
+      item.end_write_data();
       return -1;
     end
     return idx;
@@ -195,6 +205,9 @@ virtual class axi4_write_monitor extends axi4_monitor_base;
       @(posedge vif.aclk);
       if (vif.bvalid && vif.bready && !$isunknown(vif.bid)) begin
         int idx = find_address_store(vif.bid);
+        `uvm_info(get_type_name(),
+          $sformatf("B sampled bid=%0d stores=%0d idx=%0d t=%0t",
+                    vif.bid, address_stores.size(), idx, $time), UVM_LOW)
         if (idx >= 0) begin
           axi4_item item = address_stores[idx];
           address_stores.delete(idx);

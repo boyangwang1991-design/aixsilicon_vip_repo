@@ -74,6 +74,9 @@ class axi4_item extends uvm_sequence_item;
   bit inject_missing_wlast;
   bit inject_valid_drop;
 
+  // 观察标志（monitor 置位）：W 阶段是否出现过 WLAST（RUL-005 检测依据）
+  bit wlast_seen;
+
   // ===========================================================================
   // 内部状态（事件：address/write_data/response 的 begin/end）
   // ===========================================================================
@@ -129,6 +132,7 @@ class axi4_item extends uvm_sequence_item;
     inject_unstable_payload = 0;
     inject_missing_wlast    = 0;
     inject_valid_drop       = 0;
+    wlast_seen              = 0;
     start_delay       = 0;
     address_ready_delay = 0;
     response_start_delay = 0;

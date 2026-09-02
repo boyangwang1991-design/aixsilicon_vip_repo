@@ -249,12 +249,18 @@ class axi4_checker extends uvm_scoreboard;
     end
 
     // ---- AXI4-REQ-RUL-005：burst 完成必须有 WLAST（missing-WLAST 注入检测）----
-    // monitor 依 WLAST 触发 end_write_data；missing-WLAST 时 data 收满 burst_length
-    // 但 write_data_ended 未置位 → 该笔事务"数据齐而无 WLAST"即缺失违规。
+    // 仅对**长度合法**的 burst 检查（非法长度已由 PRO-010 检出，避免重复计数）；
+    // monitor 在 W 阶段结束（WLAST 或"收满即终"容错）后发布完整事务，
+    // wlast_seen==0 表示整个 W 阶段无 WLAST → 缺失违规。
     if (item.is_write() && item.has_response &&
         (item.data.size() == item.burst_length) &&
-        (item.write_data_ended_status() == 0) &&
-        (item.burst_length > 1)) begin
+        (item.wlast_seen == 0) && (item.burst_length > 1) &&
+        (((item.burst_type == AXI4_INCREMENTING_BURST) &&
+          (item.burst_length inside {[1:256]})) ||
+         ((item.burst_type == AXI4_FIXED_BURST) &&
+          (item.burst_length inside {[1:16]})) ||
+         ((item.burst_type == AXI4_WRAPPING_BURST) &&
+          (item.burst_length inside {2, 4, 8, 16})))) begin
       report_violation("AXI4-REQ-RUL-005",
                        "写事务数据收满但无 WLAST（burst 未正常终止）", "ERROR", "W", item);
     end
