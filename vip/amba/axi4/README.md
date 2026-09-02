@@ -12,12 +12,16 @@
 
 ## 状态
 
-`Developing`：**G0 PASS（1.0.0-g0-baseline）→ G1 PASS（0.4.0-draft 运行时模型冻结）→ G2 源码编译通过
-→ G3 Self-Verification 主体完成（2026-09-01）**：6 tier 回归全 PASS（smoke/feature/corner/negative/random/stress），
-修复 8 处 G2/G3 缺陷（slave memory 写路径、B/R join 死锁、clocking 握手错位、is_crossing_4kb、随机约束等）；
-negative/mutation 检测 5/5=100%。validation-plan 已按 G2/G3 blocker 评审意见修正并 Freeze；
-rtm.md / user-guide.md 已交付。剩余：12 条 RUL 专项负向注入、背压/延迟/交织路径、AW/W 解耦驱动形态、
-protocol_event 独立验证、RAL（G6 blocker）、FuseSoC/qualification（G5/G6）。
+`Qualifying`：**G0（1.0.0-g0-baseline）→ G1（运行时模型冻结）→ G2（VCS 编译 + unit 79/79）
+→ G3（full 9 tier 全绿）→ G5 主体（qualification 报告生成）**。
+
+当前进度（2026-09-02）：
+- **self_test 9 tier 全 PASS**：smoke/feature/corner/negative/random/stress/concurrent/error/ral；
+- **error tier 闭环**：E1 RUL-017（burst 缩短）checker 精确检出（VALIDATED）；E2 RUL-011 SVA 诚实 NOT_RUN；
+- **RAL 定向验证 PASS**（adapter reg2bus/bus2reg + predictor + 物理 memory）；
+- **Unit Test 79/79 PASS**（semantic/memory/transaction golden vectors）；
+- **FuseSoC `.core` 生成 + qualification 证据包**（coverage/fault_injection/limitations/RTM/qualification_report）；
+- **剩余（G4）**：四层覆盖闭合、E2（stall 时序）、C3（decouple clocking 沿）、outstanding 读异步化。
 
 ## 目录
 

@@ -3,7 +3,21 @@
 所有显著变更记录于此。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本遵循 SemVer。
 
-## [Unreleased] — 1.0.0（developing，G3 主体完成 + L1 Unit Test 层 + concurrent tier）
+## [Unreleased] — 1.0.0（Qualifying，G5 主体 + error/RAL 闭环 + qualification 证据包）
+
+### Added（2026-09-02 S10）
+
+* **error tier 检出闭环（E1 VALIDATED）**：monitor W 重建改为实际拍数 resize +
+  `write_data_ended_status()` 归属切换；item 级注入字段（`inject_early_wlast`/
+  `inject_unstable_payload`）E1/E2 独立控制；early-WLAST 语义修正（第 2 拍，2 beat）。
+  `make error` PASS（RUL-017 检出 2/2）；E2（RUL-011 SVA）诚实 NOT_RUN（stall 时序）。
+* **RAL 定向验证（`axi4_ral_test`，PASS）**：adapter reg2bus/bus2reg 直接驱动总线 +
+  predictor 组件订阅 + 物理 memory 读回一致（VER-014）。
+* **FuseSoC `.core`**：`aixsilicon_vip_axi4_1.0.0.core`（gen-core 生成，rtl+selftest）。
+* **qualification/ 证据包**：coverage_report / fault_injection / known_limitations /
+  requirement_traceability / qualification_report / README + `metadata/vip.yaml`。
+* full 回归升级为 **9/9 PASS**（smoke/feature/corner/negative/random/stress/
+  concurrent/error/ral）。
 
 ### Added（2026-09-02 S09）
 

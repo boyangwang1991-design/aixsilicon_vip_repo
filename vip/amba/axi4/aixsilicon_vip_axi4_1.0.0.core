@@ -1,0 +1,60 @@
+CAPI=2:
+# axi4 VIP — FuseSoC Core（由 vip-development-suite gen-core 生成）
+name: aixsilicon:vip:axi4:1.0.0
+
+description: >-
+  AIXSILICON axi4 VIP。
+
+filesets:
+  rtl:
+    files:
+      - src/agent/axi4_agent.sv
+      - src/agent/axi4_driver.sv
+      - src/agent/axi4_monitor.sv
+      - src/agent/axi4_sequencer.sv
+      - src/axi4_configuration.sv
+      - src/axi4_if.sv
+      - src/axi4_memory.sv
+      - src/axi4_pkg.sv
+      - src/axi4_status.sv
+      - src/axi4_types_pkg.sv
+      - src/checker/axi4_assertions.sv
+      - src/checker/axi4_checker.sv
+      - src/coverage/axi4_coverage.sv
+      - src/env/axi4_env.sv
+      - src/env/axi4_violation_injector.sv
+      - src/ral/axi4_ral_adapter.sv
+      - src/sequences/axi4_sequences.sv
+      - src/transaction/axi4_item.sv
+    file_type: systemVerilogSource
+
+  selftest:
+    files:
+      - self_test/tb/axi4_concurrent_test.sv
+      - self_test/tb/axi4_corner_test.sv
+      - self_test/tb/axi4_error_test.sv
+      - self_test/tb/axi4_feature_test.sv
+      - self_test/tb/axi4_negative_test.sv
+      - self_test/tb/axi4_ral_test.sv
+      - self_test/tb/axi4_random_test.sv
+      - self_test/tb/axi4_smoke_env.sv
+      - self_test/tb/axi4_smoke_tb.sv
+      - self_test/tb/axi4_smoke_test.sv
+      - self_test/tb/axi4_stress_test.sv
+    file_type: systemVerilogSource
+
+targets:
+  default:
+    filesets: [rtl]
+    description: 供其他 Core 依赖的默认包
+  lint:
+    filesets: [rtl]
+    description: 静态检查入口
+  smoke:
+    filesets: [rtl, selftest]
+    toplevel: [axi4_smoke_tb]
+    description: 最小闭环
+  regression:
+    filesets: [rtl, selftest]
+    toplevel: [axi4_smoke_tb]
+    description: 标准回归入口

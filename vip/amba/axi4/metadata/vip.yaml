@@ -1,0 +1,51 @@
+# AXI4 VIP 元数据（VIP SSOT 摘要；发布门禁 G6 依据）
+vlnv: aixsilicon:vip:axi4:1.0.0
+name: axi4
+category: amba
+profile: FULL_UVM
+hwif: aixsilicon:hwif:axi
+id: VIP-001
+version: 1.0.0
+lifecycle: Qualifying          # Planned → Developing → Qualifying → Qualified → Released
+gates:
+  g0: PASS                     # requirement 1.0.0-g0-baseline
+  g1: PASS                     # architecture 0.4.0-draft（运行时模型冻结）
+  g2: PASS                     # VCS 编译 + unit 79/79
+  g3: PASS                     # full 9/9 tier 全绿 + error E1 检出
+  g4: NOT_RUN                  # 覆盖闭合（骨架就绪）
+  g5: PARTIAL                  # qualification 主体通过；E2/C3 NOT_RUN（known_limitations）
+  g6: NOT_RUN                  # release 打包待 G5 全绿
+delivery:
+  mode: 开源全量
+  core: aixsilicon_vip_axi4_1.0.0.core
+  docs:
+    - docs/requirement.md
+    - docs/architecture.md
+    - docs/validation-plan.md
+    - docs/rtm.md
+    - docs/user-guide.md
+  qualification: qualification/
+  reports: reports/quality/run_log.md
+limitations:
+  - id: LIM-001
+    desc: E2 unstable payload（RUL-011 SVA）检出依赖 stall 时序，当前 NOT_RUN
+    status: NOT_RUN
+    plan: G4 统一采样沿后确定性 stall
+  - id: LIM-002
+    desc: C3 W-before-AW 解耦回环（PRO-019）slave 预收 clocking 沿错位，验证 NOT_RUN
+    status: NOT_RUN
+    plan: G4 per-beat 所有权仲裁
+  - id: LIM-003
+    desc: outstanding 读异步化 + 多 ID 乱序/交织完整并发未验证
+    status: NOT_RUN
+    plan: 独立 PR（G4）
+  - id: LIM-004
+    desc: 四层覆盖闭合未完成（功能 covergroup 骨架就绪）
+    status: NOT_RUN
+    plan: G4 多 tier 合并 + coverage-check
+evidence:
+  regression: make -C self_test full    # 9/9 PASS（VCS W-2024.09-SP1 / UVM 1.2 / seed=1）
+  unit: make -C self_test unit          # 79/79 PASS
+  mutation: negative 4/4 + error E1 2/2 # 100%（已闭环注入）
+  ral: make -C self_test ral            # PASS
+  coverage: make -C self_test cov       # smoke 基线（四层骨架）
