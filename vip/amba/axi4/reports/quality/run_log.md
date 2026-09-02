@@ -658,3 +658,27 @@ test 内含 slave driver 存在性检查。完整 PASSIVE 流量专项待 G4（�
 ### 结论
 **P2-2 timeout 专项闭环**（enable_timeout 路径首次真实触发并检出）；
 测试控制信号机制（suppress_r）建立，为后续负向场景提供通用窗口构造手段。
+
+## 2026-09-02 — S16：G4 覆盖量化画像建立（阈值判定数据齐备）
+
+### 完成
+1. **urg merge 排查**：URG 存在但 `covdb_get_license` 崩溃（license 不可用）；
+   vdb 已保留（build/cov/axi4_cov_*.vdb），license 可用时复跑即可；
+2. **量化替代路径**：以 `axi4_coverage` report（covergroup get_coverage() 百分比）
+   为量化依据，提取 6 tier 数据（stress 为最高基线）；
+3. **qualification/coverage_report.md 重写为 G4 量化版**：
+   * 各 covergroup 实测：scenario=100 ✅、burst=83 ⚠️、assertion 全命中 ✅；
+   * **缺口量化**：strobe=0%（partial/sparse 未生成）、exclusive=50%、
+     access=50%（monitor 通道不均衡）、type_resp=29%、len_size=1%（巨型 cross）；
+   * **G4 缺口清单 7 项**（专项激励手段逐项对应，无需 monitor 结构改动）。
+
+### 验证
+| 检查 | 结果 |
+| --- | --- |
+| cov_full（6 tier） | PASS（vdb+summary；merge 待 license） |
+| full 回归 | 9/9 PASS 保持 |
+
+### 结论
+**G4 量化画像建立**：scenario/burst/assertion 达标或接近；Cross（len_size 1%/
+type_resp 29%）与 Field（strobe 0%/exclusive 50%）为主要缺口，专项激励计划
+已列入 coverage_report §缺口清单。G4 闭合待专项序列 + urg 复跑。
