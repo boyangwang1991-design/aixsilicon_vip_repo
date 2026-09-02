@@ -35,6 +35,16 @@ class axi4_master_driver extends uvm_driver #(axi4_master_item);
   // ===========================================================================
   bit decouple_w_before_aw;
 
+  // ===========================================================================
+  // outstanding 读（PRO-008 完整并发）：
+  //   async_read = 1 时读请求阶段完成即 item_done，R 由后台线程按 per-ID FIFO
+  //   收取并回填 item（sequence 不依赖同步 rdata；多 ID 可交织）。
+  //   默认 0（同步读，现有 sequence 兼容）。
+  // ===========================================================================
+  bit async_read;
+
+  protected axi4_master_item outstanding_rd[axi4_id][$];
+
   `uvm_component_utils(axi4_master_driver)
 
   function new(string name = "axi4_master_driver", uvm_component parent = null);
@@ -43,6 +53,7 @@ class axi4_master_driver extends uvm_driver #(axi4_master_item);
     inject_missing_wlast    = 0;
     inject_unstable_payload = 0;
     decouple_w_before_aw    = 0;
+    async_read              = 0;
   endfunction
 
   function void build_phase(uvm_phase phase);
@@ -324,6 +335,37 @@ class axi4_master_driver extends uvm_driver #(axi4_master_item);
     end
   endtask
 
+  // ===========================================================================
+  // 读响应后台线程（PRO-008 outstanding 读 / async_read=1）：
+  //   任一 ID 的 R 拍到达时，按 per-ID FIFO 找到最早的未完成 read context 回填。
+  //   R 数据（含 RLAST）按 monitor 相同语义重建：rid 匹配 + RLAST 结束。
+  // ===========================================================================
+  // async 读的单笔 R 收集进程：与 receive_read_response 相同的 master_cb 采样
+  // 结构（同步读已验证可靠），由主循环在 AR 完成时 fork（C2 写 outstanding
+  // 的 join_none 同款模式）；收集完 RLAST 后回填 item。
+  protected task async_read_collect(axi4_master_item item);
+    axi4_response resp[$];
+    axi4_data rdata[$];
+    bit done;
+    done = 0;
+    while (!done) begin
+      @(vif.master_cb);
+      if (vif.master_cb.rvalid === 1'b1) begin
+        resp.push_back(vif.master_cb.rresp);
+        rdata.push_back(vif.master_cb.rdata);
+        if (vif.master_cb.rlast === 1'b1) begin
+          done = 1;
+        end
+      end
+    end
+    item.response = new[resp.size()];
+    item.data     = new[rdata.size()];
+    foreach (resp[i])  item.response[i] = resp[i];
+    foreach (rdata[i]) item.data[i]     = rdata[i];
+    item.has_response = 1;
+    item.end_response();
+  endtask
+
   virtual task run_phase(uvm_phase phase);
     // 复位期间保持 VALID=0，等待复位释放后再驱动（REQ-018）
     reset_signals();
@@ -351,9 +393,20 @@ class axi4_master_driver extends uvm_driver #(axi4_master_item);
       end
       else begin
         drive_address(item);
-        // 读：同步收取 R（sequence 依赖 rdata）
-        receive_read_response(item);
-        seq_item_port.item_done();
+        if (async_read) begin
+          // outstanding 读（PRO-008）：AR 完成即 item_done，R 由本 item 的
+          // 独立收集进程回填（fork join_none，C2 写 outstanding 同款模式）
+          item.has_response = 0;
+          fork
+            async_read_collect(item);
+          join_none
+          seq_item_port.item_done();
+        end
+        else begin
+          // 同步读（默认，现有 sequence 兼容）
+          receive_read_response(item);
+          seq_item_port.item_done();
+        end
       end
     end
   endtask
@@ -549,11 +602,16 @@ class axi4_slave_driver extends uvm_driver #(axi4_slave_item);
   endtask
 
   // 等待读请求（AR）
+  // slave_cb（input #1step）采样：master output#1 驱动后的稳定值（posedge 直接
+  // 采样会读到驱动前旧值 → AR 字段错位，multi-id len=2 读成 1 拍的根因）。
   protected task wait_for_read_request(ref axi4_item item);
     axi4_item req;
     forever begin
       @(vif.slave_cb);
       if (vif.slave_cb.arvalid === 1'b1) begin
+        `uvm_info(get_type_name(),
+          $sformatf("SLAVE_AR sampled id=%0d addr=0x%0h t=%0t",
+                    vif.slave_cb.arid, vif.slave_cb.araddr, $time), UVM_LOW)
         req = axi4_item::type_id::create("req");
         req.access_type = AXI4_READ_ACCESS;
         req.id           = vif.slave_cb.arid;

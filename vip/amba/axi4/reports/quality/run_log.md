@@ -530,3 +530,42 @@ P1-1 覆盖闭合管道。
 ### 结论
 **P0 技术债清零**：E2/C3 由 NOT_RUN 转 VALIDATED，known_limitations #1/#2 解除；
 G4 覆盖管道建立（cov_full 证据化）。full 9/9 稳定回归保持。
+
+## 2026-09-02 — S12：P1-2 outstanding 读异步化闭环（PRO-008 完整并发）✅
+
+### 目标
+master 读路径异步化：AR 完成即 item_done，R 由独立收集进程回填（多 ID 交织），
+并新增 concurrent C4 专项场景验证。
+
+### 实现（src/agent/axi4_driver.sv）
+1. **`async_read` 开关**（默认 0，现有同步 sequence 零回退）：
+   `async_read=1` 时读请求 AR 握手完成即 `item_done`。
+2. **`async_read_collect(item)`**：单笔 R 收集进程——与 `receive_read_response`
+   **完全相同的 master_cb 采样结构**（同步读已验证可靠），由主循环在 AR 完成时
+   `fork join_none`（C2 写 outstanding 的同款模式，实测可靠）。
+   收集到 RLAST 后回填 item（response/data/has_response/end_response）。
+3. **设计取舍记录**：独立后台轮询线程（read_response_thread）三种采样形态
+   （master_cb / posedge+顶层 / posedge+#1 稳定窗）均无法感知 R 拍（线程上下文
+   clocking 等待与主循环竞争），而**主循环 fork 的同结构进程可靠**——fork-per-item
+   是 VCS 下该环境验证过的可靠并发收响应模式。
+
+### concurrent C4 专项（axi4_outstanding_read_seq）
+* 预写 7 个特征值（0xE000..0xE0C0，同步写）→ 连续 7 笔多 ID（id=0..3 交织）
+  异步读（AR 完成即返回）→ `#500` 等待回填 → 逐笔校验 has_response + data 一致。
+* **结果：`outstanding async read 7 beats (multi-id) PASS`**，C1+C2+C3+C4 全绿
+  （UVM_ERROR=0）。
+
+### 验证（VCS W-2024.09-SP1 / UVM 1.2 / seed=1）
+| 检查 | 结果 |
+| --- | --- |
+| concurrent tier（C1 多 ID + C2 outstanding 写 + C3 解耦 + C4 outstanding 读） | **PASS（UVM_ERROR=0）** |
+| full 回归 | **9/9 PASS** |
+
+### 剩余（如实）
+* P2-1 RUL 专项负向注入全集（001/002/005/006/007/008/009/010/012~016）；
+* P2-2 PASSIVE/timeout/extension 专项；
+* P3-1 rtm.md S10~S12 同步、P3-2 examples//fault_injection/。
+
+### 结论
+**P1-2 outstanding 读异步化闭环**（known_limitations #3 解除）；PRO-008 完整并发
+（多 ID outstanding 读/写 + 交织）具备专项 PASS 证据。full 9/9 稳定回归保持。

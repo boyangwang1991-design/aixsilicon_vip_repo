@@ -146,6 +146,76 @@ class axi4_outstanding_seq extends axi4_master_base_seq;
 endclass : axi4_outstanding_seq
 
 
+// outstanding 读流水 sequence（PRO-008 完整并发 / async_read）：
+// 连续 N 笔多 ID 读（异步 item_done），随后经 driver 后台线程回填后统一校验。
+class axi4_outstanding_read_seq extends axi4_master_base_seq;
+
+  rand int num_reads;
+
+  constraint c_ord { num_reads inside {[4:8]}; }
+
+  `uvm_object_utils(axi4_outstanding_read_seq)
+
+  function new(string name = "axi4_outstanding_read_seq");
+    super.new(name);
+    num_reads = 6;
+  endfunction
+
+  virtual task body();
+    axi4_master_item items[$];
+    int errors = 0;
+    string msg;
+
+    // 预写特征值（同步写，B 后台收）
+    for (int i = 0; i < num_reads; i++) begin
+      write(32'h0000_E000 + i * 32'h20, 32'hECE0_0000 + i);
+    end
+    #100;
+
+    // 连续多 ID 异步读（driver async_read=1：AR 完成即 item_done）
+    for (int i = 0; i < num_reads; i++) begin
+      axi4_master_item item;
+      item = axi4_master_item::type_id::create($sformatf("ord_rd_%0d", i));
+      item.access_type  = AXI4_READ_ACCESS;
+      item.id           = axi4_id'(i % 4);
+      item.address      = 32'h0000_E000 + i * 32'h20;
+      item.burst_length = 1;
+      item.burst_size   = 4;
+      item.burst_type   = AXI4_INCREMENTING_BURST;
+      start_item(item);
+      finish_item(item);
+      items.push_back(item);
+    end
+
+    // 等待后台线程回填（R 按 per-ID FIFO 回来后 data 有效）
+    #500;
+    foreach (items[i]) begin
+      if (!items[i].has_response) begin
+        msg = $sformatf("outstanding-read[%0d] no response (backfill incomplete)", i);
+        `uvm_error(get_type_name(), msg)
+        errors++;
+      end
+      else if (items[i].data.size() == 0) begin
+        msg = $sformatf("outstanding-read[%0d] empty data", i);
+        `uvm_error(get_type_name(), msg)
+        errors++;
+      end
+      else if (items[i].data[0] !== (32'hECE0_0000 + i)) begin
+        msg = $sformatf("outstanding-read[%0d] mismatch: got %08h",
+                        i, items[i].data[0][31:0]);
+        `uvm_error(get_type_name(), msg)
+        errors++;
+      end
+    end
+    if (errors == 0) begin
+      `uvm_info(get_type_name(),
+        $sformatf("outstanding async read %0d beats (multi-id) PASS", num_reads), UVM_LOW)
+    end
+  endtask
+
+endclass : axi4_outstanding_read_seq
+
+
 // W-before-AW 解耦 sequence
 class axi4_decouple_seq extends axi4_master_base_seq;
 
@@ -201,6 +271,7 @@ class axi4_concurrent_test extends uvm_test;
     axi4_multi_id_seq   seq1;
     axi4_outstanding_seq seq2;
     axi4_decouple_seq   seq3;
+    axi4_outstanding_read_seq seq4;
     axi4_master_driver  mdrv;
 
     phase.raise_objection(this);
@@ -228,6 +299,19 @@ class axi4_concurrent_test extends uvm_test;
     #50;
     if (mdrv != null) begin
       mdrv.decouple_w_before_aw = 0;   // 恢复默认形态
+    end
+
+    // C4 outstanding 读（PRO-008 完整并发）：async_read=1，AR 完成即 item_done，
+    // R 由 driver 后台线程按 per-ID FIFO 回填；多 ID 交织场景校验。
+    seq4 = axi4_outstanding_read_seq::type_id::create("seq4");
+    void'(seq4.randomize());
+    if (mdrv != null) begin
+      mdrv.async_read = 1;
+    end
+    seq4.start(env.master_agent.sequencer);
+    #50;
+    if (mdrv != null) begin
+      mdrv.async_read = 0;             // 恢复同步读（其余 tier 兼容）
     end
 
     phase.drop_objection(this);
