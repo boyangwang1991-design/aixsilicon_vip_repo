@@ -15,6 +15,16 @@ transcript
 *.fsdb
 *.wlf
 
+# ---- 仿真器编译中间产物（VCS/Questa 等在源目录生成的临时文件） ----
+csrc/
+simv*
+simv.daidir/
+ucli.key
+vc_hdrs.h
+*.vpd
+*.vdb/
+*.mti
+
 # ---- 发布产物 ----
 dist/
 *.tar.gz
