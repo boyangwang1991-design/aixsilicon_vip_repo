@@ -46,10 +46,10 @@ Driver 最后。
 ```text
 vip/amba/axi4/
 ├── docs/            requirement/architecture/validation-plan/rtm/user-guide
-├── src/             types/if/config/status/memory/transaction/agent/sequences/checker/env/coverage
-├── self_test/       Makefile + filelist + tb（6 tier 测试）
-├── fault_injection/ 待建（injector 类在 src/env）
-├── fusesoc/         待建（gen-core 生成 .core）
+├── src/             types/if/config/status/memory/transaction/agent/sequences/checker/env/coverage/ral
+├── self_test/       Makefile + filelist + tb（9 tier + rul/fi/passive/cov_sweep 专项）
+├── fault_injection/ FI-001~015 案例索引（injector 类在 src/env；README 含状态）
+├── fusesoc/         FuseSoC core（aixsilicon_vip_axi4_1.0.0.core 已生成）
 ├── qualification/   待建（G5 证据包）
 └── reports/         logs + quality/run_log.md
 ```
@@ -68,7 +68,14 @@ vip/amba/axi4/
 ```bash
 make -C self_test compile      # VCS -sverilog -full64 -timescale=1ns/1ps -ntb_opts uvm-1.2
 make -C self_test smoke        # 最小正向
-make -C self_test full         # 6 tier 全回归
+make -C self_test full         # 9 tier 全回归（smoke/feature/corner/negative/
+                               #  random/stress/concurrent/error/ral）
+make -C self_test unit         # L1 Unit Test（79 golden cases）
+make -C self_test rul          # RUL 专项（M1 valid-drop + M2 missing-WLAST）
+make -C self_test fi           # FI 专项（FI-013 非预期响应 + FI-015 exclusive 总线级）
+make -C self_test passive      # timeout 专项（suppress_r 构造 R 超时窗口）
+make -C self_test cov_sweep    # G4 覆盖 sweep（strobe/exclusive/len×size/4KB）
+make -C self_test cov_full     # 6 tier 覆盖采样 + vdb（urg merge 复跑用）
 ```
 
 产物：`self_test/build/simv`；日志 `self_test/build/logs/<test>.log`；
@@ -294,8 +301,9 @@ extension 专项验证 NOT_RUN。
 
 # 40. Example Projects（按Profile：按 Profile 给示例）
 
-`self_test/tb/` 即最小示例工程（smoke_tb + 6 测试）；`examples/`（最小集成示例 DUT）
-待建。
+`self_test/tb/` 即最小示例工程（smoke_tb + 全部测试）；`examples/axi4_example_top.sv`
+为最小集成示例（axi4_if + 时钟复位 + UVM 配置/启动），集成要点见
+`examples/README.md`。
 
 # 41. Limitations（必填）
 

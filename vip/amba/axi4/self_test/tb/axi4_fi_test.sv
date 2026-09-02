@@ -34,6 +34,91 @@ class axi4_fi_seq extends axi4_master_base_seq;
     `uvm_info(get_type_name(), "FI-013b: illegal RRESP injection", UVM_LOW)
     read(32'h0000_9000, rdata);
     #50;
+
+    // ==== FI-015: exclusive 冲突总线级（RUL-016；此前仅 unit 层覆盖）====
+    // a) exclusive read @0xB000（建立标记）
+    // b) exclusive write @0xB000 → EXOKAY（标记命中）
+    // c) normal write @0xB000 → OKAY + 标记失效
+    // d) exclusive write @0xB000 → OKAY（标记已被清除，冲突检出）
+    begin
+      axi4_master_item it;
+      int wait_c;
+
+      // a) exclusive read（建立标记）
+      it = axi4_master_item::type_id::create("ex_rd");
+      it.access_type  = AXI4_READ_ACCESS;
+      it.id           = 3;
+      it.address      = 32'h0000_B000;
+      it.burst_length = 1;
+      it.burst_size   = 4;
+      it.burst_type   = AXI4_INCREMENTING_BURST;
+      it.lock         = AXI4_EXCLUSIVE_LOCK;
+      start_item(it);
+      finish_item(it);
+
+      // b) exclusive write → EXOKAY
+      it = axi4_master_item::type_id::create("ex_wr1");
+      it.access_type  = AXI4_WRITE_ACCESS;
+      it.id           = 3;
+      it.address      = 32'h0000_B000;
+      it.burst_length = 1;
+      it.burst_size   = 4;
+      it.burst_type   = AXI4_INCREMENTING_BURST;
+      it.lock         = AXI4_EXCLUSIVE_LOCK;
+      it.data         = new[1];
+      it.strobe       = new[1];
+      it.data[0]      = 32'hE515_0001;
+      it.strobe[0]    = 4'b1111;
+      start_item(it);
+      finish_item(it);
+      wait_c = 0;
+      while (!it.has_response && wait_c < 200) begin
+        #10;
+        wait_c++;
+      end
+      if (it.response.size() > 0 && it.response[0] != AXI4_EXOKAY) begin
+        `uvm_error(get_type_name(), $sformatf(
+          "FI-015b: exclusive write (marker hit) should EXOKAY, got %s",
+          it.response[0].name()))
+      end
+      else begin
+        `uvm_info(get_type_name(),
+          "FI-015b: exclusive write marker-hit → EXOKAY PASS", UVM_LOW)
+      end
+
+      // c) normal write（清除标记）
+      write(32'h0000_B000, 32'hE515_0002);
+
+      // d) exclusive write → OKAY（标记已失效 = 冲突检出）
+      it = axi4_master_item::type_id::create("ex_wr2");
+      it.access_type  = AXI4_WRITE_ACCESS;
+      it.id           = 3;
+      it.address      = 32'h0000_B000;
+      it.burst_length = 1;
+      it.burst_size   = 4;
+      it.burst_type   = AXI4_INCREMENTING_BURST;
+      it.lock         = AXI4_EXCLUSIVE_LOCK;
+      it.data         = new[1];
+      it.strobe       = new[1];
+      it.data[0]      = 32'hE515_0003;
+      it.strobe[0]    = 4'b1111;
+      start_item(it);
+      finish_item(it);
+      wait_c = 0;
+      while (!it.has_response && wait_c < 200) begin
+        #10;
+        wait_c++;
+      end
+      if (it.response.size() > 0 && it.response[0] != AXI4_OKAY) begin
+        `uvm_error(get_type_name(), $sformatf(
+          "FI-015d: exclusive write after clear should OKAY, got %s",
+          it.response[0].name()))
+      end
+      else begin
+        `uvm_info(get_type_name(),
+          "FI-015d: exclusive write after clear → OKAY PASS (RUL-016 bus-level)", UVM_LOW)
+      end
+    end
   endtask
 
 endclass : axi4_fi_seq

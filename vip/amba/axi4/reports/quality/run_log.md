@@ -754,3 +754,15 @@ size_bus_burst=13 len_size=1 boundary=100 scenario=100`
 **FI-013 闭环**（G4 注入实现第 9 类 VALIDATED）；"2-bit 响应空间不可构造
 非法编码"验证结论记录。剩余 FI-009~012/014/015（需 multi-ID 乱序/复位/
 WSTRB 越界/exclusive 冲突等 slave 行为改造）。
+
+### S19 补充：FI-015 exclusive 冲突总线级闭环 ✅（RUL-016）
+* **场景**（追加至 axi4_fi_test）：a) exclusive read（建立标记）→
+  b) exclusive write（标记命中 → **EXOKAY**）→ c) normal write（清除标记）→
+  d) exclusive write（标记已失效 → **OKAY**，冲突检出）；
+* **实测**：FI-015b marker-hit→EXOKAY PASS + FI-015d after-clear→OKAY PASS；
+* **意义**：RUL-016 exclusive 语义由 unit 层（memory 状态机）升级为
+  **总线级 VALIDATED**（known_limitations 中"exclusive 仅 unit 层"缺口解除）。
+
+### 更新后剩余
+FI-009/010/011（multi-ID 响应乱序/交织——需 outstanding 读乱序响应注入）、
+FI-012（复位中 traffic）、FI-014（WSTRB 越界——需 slave 数据路径改造）。
