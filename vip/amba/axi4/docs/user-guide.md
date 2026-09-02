@@ -4,10 +4,151 @@
 > **VIP Name**: `axi4`
 > **Protocol / Interface**: `AXI4 / AXI4-Lite`（IHI 0022E）
 > **Version**: `1.0.0`
-> **Status**: `Draft（对应 1.0.0 developing 实现）`
+> **Status**: `Active（对应 1.0.0 实现；S10~S19 后持续更新）`
 > **Owner**: `aixsilicon_vip_repo`
 > **Target VLNV**: `aixsilicon:vip:axi4:1.0.0`
 > **Profile**: `FULL_UVM`
+
+---
+
+# 0. 快速上手（5 分钟跑通你的第一个 AXI4 验证环境）
+
+> 本章面向"第一次用这个 VIP"的工程师：三步接入 → 一段代码发起读写 → 看懂输出。
+
+## 0.1 这个 VIP 是什么、能干什么
+
+`axi4` VIP 是一个**自包含的 UVM 1.2 验证 IP**，把它放进你的验证环境后，它能：
+
+1. **当主机（Master）**：向你的 DUT 发起 AXI4 读/写事务（单拍、burst、narrow、
+   unaligned、exclusive 等），你只需在 sequence 里调 4 个高层 API；
+2. **当从机（Slave）**：内置一个内存 + 响应策略模型，自动应答 AW/W/AR
+   （可用于环回自测，或给无协议能力的 DUT 陪练）；
+3. **当裁判（Checker/SVA/Coverage）**：被动监听总线，实时重建事务并按
+   RUL-001~017 协议规则逐条检查，违规立即报 `UVM_ERROR`（含 rule_id 定位）。
+
+三个核心模型（也是三个 agent 视角）：
+
+```text
+Stimulus:      Sequence → Driver → 接口      （发起协议行为）
+Observation:   接口 → Monitor → 事务流        （还原协议行为）
+Qualification: 事务流 → Checker/SVA/Coverage  （评判协议行为）
+```
+
+## 0.2 三步接入你的环境
+
+**第 1 步：例化接口**（信号全集对齐 HWIF `IFC-AXI-001`，与你的 DUT 直连）
+
+```systemverilog
+axi4_if #(.ID_WIDTH(8), .ADDRESS_WIDTH(32), .DATA_WIDTH(32)) vif (
+  .aclk(aclk), .areset_n(areset_n));
+```
+
+**第 2 步：config_db 四件套**（把接口与配置交给 VIP）
+
+```systemverilog
+axi4_configuration master_cfg = axi4_configuration::type_id::create("master_cfg");
+void'(master_cfg.randomize() with {
+  protocol   == AXI4_PROTOCOL;          // 或 AXI4LITE_PROTOCOL
+  agent_mode == AXI4_ACTIVE_MASTER;     // 当主机
+});
+master_cfg.vif = vif;
+
+uvm_config_db #(virtual axi4_if)::set(null, "*", "vif", vif);
+uvm_config_db #(axi4_configuration)::set(null, "*", "master_cfg", master_cfg);
+// slave 同理（slave_cfg / AXI4_ACTIVE_SLAVE）；status 可选
+```
+
+**第 3 步：跑 VIP 自带的 smoke 测试确认环境通了**
+
+```bash
+make -C self_test smoke     # PASS 判定：UVM_ERROR=0
+```
+
+## 0.3 写你的第一条测试（四种高层 API）
+
+从 `axi4_master_base_seq` 派生你的 sequence，直接使用高层 API：
+
+```systemverilog
+class my_test_seq extends axi4_master_base_seq;
+  `uvm_object_utils(my_test_seq)
+  function new(string name = "my_test_seq"); super.new(name); endfunction
+
+  virtual task body();
+    axi4_data rdata;
+    axi4_data wdata[];
+    axi4_data rdata_burst[];
+
+    // ① 单拍写 / 单拍读
+    write(32'h0000_1000, 32'hDEAD_BEEF);         // 写一个字
+    read(32'h0000_1000, rdata);                  // 读回校验
+    if (rdata !== 32'hDEAD_BEEF)
+      `uvm_error(get_type_name(), "read-back mismatch")
+
+    // ② burst 写（4 拍 INCR）
+    wdata = new[4];
+    foreach (wdata[i]) wdata[i] = 32'h1234_0000 + i;
+    burst_write(32'h0000_2000, wdata,
+                '{default:4'b1111}, 4);          // burst_len=4
+
+    // ③ burst 读
+    burst_read(32'h0000_2000, 4, 4, rdata_burst);
+
+    // ④ item 级控制（需要 WRAP/narrow/exclusive 等精细控制时）
+    begin
+      axi4_master_item item;
+      item = axi4_master_item::type_id::create("it");
+      item.access_type  = AXI4_WRITE_ACCESS;
+      item.address      = 32'h0000_3000;
+      item.burst_length = 4;
+      item.burst_size   = 4;
+      item.burst_type   = AXI4_WRAPPING_BURST;   // WRAP burst
+      item.data         = wdata;
+      item.strobe       = '{4'b1111, 4'b1111, 4'b1111, 4'b1111};
+      start_item(item);
+      finish_item(item);
+    end
+  endtask
+endclass
+```
+
+## 0.4 输出怎么看
+
+| 关键字 | 含义 |
+| --- | --- |
+| `UVM_ERROR : N` | 错误总数（协议违规 + 测试断言）；PASS 判定见下 |
+| `VIOLATION [AXI4-REQ-RUL-xxx]` | 协议违规（rule_id 直接定位 requirement 条目） |
+| `检查 N 笔事务，违规 M 个` | checker 统计（违规应为注入测试的预期值） |
+| `coverage [axi4_coverage] access=...` | 功能覆盖各 covergroup 百分比 |
+
+## 0.5 常用命令速查
+
+```bash
+make -C self_test compile     # 编译（VCS -full64 -ntb_opts uvm-1.2）
+make -C self_test smoke       # 最小正向（环境通了没有？）
+make -C self_test full        # 9 tier 全回归（含 error/concurrent/ral）
+make -C self_test unit        # L1 Unit Test（79 golden cases）
+make -C self_test negative    # 负向注入（4 类非法事务，mutation 检测）
+make -C self_test fi          # FI 专项（响应异常/exclusive 总线级）
+make -C self_test cov_full    # 覆盖采样 + vdb（G4）
+```
+
+## 0.6 常见问题（FAQ）
+
+**Q1：读回数据全 0？**
+→ 检查 slave 是否为 ACTIVE（PASSIVE 模式无 driver 不应答）；
+→ 检查地址是否落在 slave memory 几何内（默认 64KB）。
+
+**Q2：B/R 超时 `响应超时 (id=..)`？**
+→ DUT 没有应答；可开 `enable_timeout=1` 让 VIP 主动报超时而不是挂死。
+
+**Q3：怎么让 slave 制造背压/慢响应？**
+→ `slave_cfg.awready_delay/wready_delay`（delay_kind=1 随机范围），
+   `response_start_delay`；运行期改 `enabled` 即可阶段化生效。
+
+**Q4：怎么注入非法事务测 DUT 的检查能力？**
+→ 两种方式：约束随机产生非法（`random_constraint_mode`）或 item 级注入钩子
+   （`inject_early_wlast`/`inject_unstable_payload`/`inject_missing_wlast`/
+   `inject_valid_drop`，参考 `self_test/tb/axi4_error_test.sv`）。
 
 ---
 
@@ -37,8 +178,16 @@ Driver 最后。
 | Exclusive（AxLOCK） | ✅（模型级） | PRO-016/RUL-016 |
 | Sideband CACHE/PROT/QOS/REGION | ✅ 驱动+重建 | PRO-017 |
 | Reset（EXTERNAL/VIP_CONTROLLED 规划） | ✅ 基础 | PRO-018/RUL-009 |
-| Outstanding/Interleave/Backpressure/延迟 | ⚠️ 配置存在，路径未接通 | PRO-007~012 |
-| AW/W 解耦、握手形态 | ⚠️ 未实现 | PRO-019/020 |
+| Outstanding 写（B 后台收） | ✅ | PRO-007 |
+| Outstanding 读（async_read，多 ID） | ✅ | PRO-007/008 |
+| Backpressure/延迟（ready_delay 跨沿） | ✅ | PRO-009/010 |
+| AW/W 解耦（W-before-AW） | ✅ 实现并验证 | PRO-019 |
+| Exclusive 总线级（EXOKAY/冲突） | ✅ | PRO-016/RUL-016 |
+| RAL（adapter + predictor） | ✅ | VER-014 |
+| Item 级注入钩子（负向） | ✅ | RUL-001/005/011/017 |
+| timeout（B/R 等待超时） | ✅ | API-010 |
+| 多 ID 乱序/交织完整并发 | ⚠️ 读同步路径下交织待 G4 | PRO-008 |
+| Interleave（响应交织） | ⚠️ 配置存在 | PRO-011/012 |
 | AXI3 locked / WID interleave / ATOP | ❌ | requirement §23 |
 
 # 3. Package Contents（必填）
@@ -307,8 +456,13 @@ extension 专项验证 NOT_RUN。
 
 # 41. Limitations（必填）
 
-见 §2 ❌/⚠️ 项与 rtm.md §36/§40；核心限制：outstanding/interleave/背压路径未接通、
-AW/W 解耦驱动未实现、RAL 未实现、第三方仿真器未验证。
+见 §2 ❌/⚠️ 项与 rtm.md §36/§40 及 `qualification/known_limitations.md`。当前核心限制：
+
+* 多 ID 乱序/交织完整并发（读同步路径，`async_read` 已具备但响应交织注入待扩）；
+* 响应交织（`enable_response_interleaving`）运行时消费未接通；
+* S10~S19 已闭环：outstanding 写/读、AW/W 解耦（W-before-AW）、背压/延迟（跨沿）、
+  exclusive 总线级、RAL adapter/predictor、timeout 路径、注入钩子（RUL-001/005/011/017）；
+* 第三方仿真器（Xcelium/Questa）未验证（仅 VCS）。
 
 # 42. Version Compatibility（必填）
 
