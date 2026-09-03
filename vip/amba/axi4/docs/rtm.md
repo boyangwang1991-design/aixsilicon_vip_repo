@@ -48,7 +48,7 @@ run 证据（`reports/logs/*.log`，VCS W-2024.09-SP1，2026-09-01，seed=1）�
 | src/ | G2（VCS 编译通过，本轮修复 8 处缺陷） |
 | self_test/ | 6 tier（smoke/feature/corner/negative/random/stress） |
 | reports/logs/*.log | 本轮 6 test 日志（build/logs/，工作区忽略不入库） |
-| reports/quality/run_log.md | S07 记录 |
+| reports/run_log.md | S07 记录 |
 
 # 4. Traceability Model（必填）
 
@@ -91,7 +91,7 @@ S10~S14 逐项闭环更新：
 * PRO-008 outstanding 读：NOT_RUN → **PASS**（S12 C4 async_read multi-id 7 beats）；
 * PRO-009 背压：PASS（error E4 + wready 跨沿拉低修复后 E2 窗口）；
 * FuseSoC core：NOT_RUN → **PASS**（S10 `aixsilicon_vip_axi4_1.0.0.core` 生成+校验）；
-* metadata/vip.yaml：NOT_RUN → **PASS**（S10 交付）；
+* reports/gate_status.md：Gate 判定 SSOT（metadata/vip.yaml 已按正交规则取消）；
 * L1 Unit Test：PASS（79/79）；
 * RUL-001/005：PARTIAL → **PASS**（S14 rul tier M1 valid-drop SVA ×1 + M2 missing-WLAST ×2）；
 * RUL-013/014/016：unit 层 PASS（memory golden），总线级专项仍在 G4；
@@ -315,7 +315,7 @@ STA-001（P2/Optional）：NOT_RUN。
 
 # 30. Metadata Trace（必填）
 
-`metadata/vip.yaml` 未建 → NOT_RUN（G5 gap）；gen-core 时须保证声明与实现一致
+`reports/gate_status.md` 为 Gate 判定唯一来源（metadata/vip.yaml 已按正交规则取消）；gen-core 时须保证声明与实现一致
 （§41 Metadata Validation）。
 
 # 31. Documentation Trace（必填）
@@ -393,7 +393,7 @@ feature 8 错（D2/D3）、corner 3 错（D5/D8）、random 45（D6）、stress 
 | Evidence | 位置 |
 | --- | --- |
 | 回归日志（6 test） | `self_test/build/logs/*.log`（工作区忽略，不入库；run_log 摘要为准） |
-| run manifest | `reports/quality/run_log.md`（S07） |
+| run manifest | `reports/run_log.md`（S07） |
 | 环境指纹 | VCS W-2024.09-SP1_Full64 / UVM-1.2.Synopsys / seed=1 / 2026-09-01 |
 
 # 42. Recommended Evidence Structure（必填）

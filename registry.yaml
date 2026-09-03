@@ -56,19 +56,22 @@ vips:
     maturity: M0
     qualification: NOT_RUN
 - id: VIP-004
-  name: apb4
-  family: APB4
+  name: apb
+  family: APB
   group: vip/amba
   profile: FULL_UVM
   priority: P0
-  hwif: apb4
-  description: Master/Slave/Monitor/Checker、wait state、slave error
-  status: planned
+  hwif: apb
+  description: APB3/4/5 Master/Slave/Monitor/Checker/SVA、wait state、slave
+    error、RME/PNSE、check_type、RAL
+  status: developing
   version: '-'
-  path: vip/amba/apb4
+  path: vip/amba/apb
   quality:
-    maturity: M0
-    qualification: NOT_RUN
+    maturity: M1
+    qualification: PARTIAL_DEVELOPING   # G0-G3 PASS；G4 feature/cross/assertion PASS、
+      # requirement 98.6%（cr_dir_error WRITE×ABORTED 1 bin）；G5 mutation 100%、
+      # compile/unit554/5tier/apb5 PASS；G6 未发布（reports/gate_status.md 证据）
 - id: VIP-005
   name: ahb_lite
   family: AHB-Lite

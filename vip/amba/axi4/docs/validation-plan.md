@@ -903,7 +903,7 @@ UVM behavior、assertion、coverage。
 
 # 41. Metadata Validation（必填）
 
-Machine-readable metadata（`metadata/vip.yaml` 与生成物）应检查：schema、name、version、
+Machine-readable 检查（`reports/gate_status.md` 与 gen-core 生成物）应检查：schema、name、version、
 protocol、profile（FULL_UVM）、capabilities、configuration、sequences、checker rules
 （RUL-001~017）、limitations（§23）、dependencies（UVM1.2），并保证 **Metadata 声明与实际实现一致**。
 
@@ -1122,7 +1122,7 @@ reports/
 └── summary/
 ```
 
-Evidence 应能够被后续 `rtm.md` 引用，并记录于 `reports/quality/run_log.md`。
+Evidence 应能够被后续 `rtm.md` 引用，并记录于 `reports/run_log.md`。
 
 ---
 

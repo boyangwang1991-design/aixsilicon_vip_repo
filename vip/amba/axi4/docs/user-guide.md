@@ -197,9 +197,9 @@ vip/amba/axi4/
 ├── docs/            requirement/architecture/validation-plan/rtm/user-guide
 ├── src/             types/if/config/status/memory/transaction/agent/sequences/checker/env/coverage/ral
 ├── self_test/       Makefile + filelist + tb（9 tier + rul/fi/passive/cov_sweep 专项）
-├── fault_injection/ FI-001~015 案例索引（injector 类在 src/env；README 含状态）
+├── self_test/axi4_fi 类注入（FI case 表在 validation-plan；结果在 reports/mutation）
 ├── fusesoc/         FuseSoC core（aixsilicon_vip_axi4_1.0.0.core 已生成）
-├── qualification/   待建（G5 证据包）
+├── reports/         run_log / gate_status / mutation / coverage
 └── reports/         logs + quality/run_log.md
 ```
 
@@ -445,7 +445,7 @@ extension 专项验证 NOT_RUN。
 
 # 39. Machine-Readable Metadata（必填）
 
-`metadata/vip.yaml` 待建（G5）；生成时声明 capabilities/checker rules/limitations
+`reports/gate_status.md`（Gate 判定 SSOT；metadata/vip.yaml 已按正交规则取消，能力/限制声明见 requirement）
 与实现一致（`aixsilicon:vip:axi4:1.0.0`）。
 
 # 40. Example Projects（按Profile：按 Profile 给示例）
@@ -456,7 +456,7 @@ extension 专项验证 NOT_RUN。
 
 # 41. Limitations（必填）
 
-见 §2 ❌/⚠️ 项与 rtm.md §36/§40 及 `qualification/known_limitations.md`。当前核心限制：
+见 §2 ❌/⚠️ 项与 rtm.md §36/§40 及 [requirement §23 Limitations](requirement.md)。当前核心限制：
 
 * 多 ID 乱序/交织完整并发（读同步路径，`async_read` 已具备但响应交织注入待扩）；
 * 响应交织（`enable_response_interleaving`）运行时消费未接通；
@@ -497,7 +497,7 @@ seq.start(env.master_agent.sequencer);
 * [x] Checker/Violation/Injection 说明（§22/23/26）
 * [x] Common Issues（§37）
 * [x] Limitations/Compatibility（§41/42）
-* [ ] metadata/vip.yaml 交付后补 §39 细节
+* [ ] reports/gate_status.md 细节随 G4/G5 收尾补全
 * [ ] RAL 实现后补 §29
 
 # 46. Definition of User Guide Complete（必填）

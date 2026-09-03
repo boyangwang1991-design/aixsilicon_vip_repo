@@ -766,3 +766,16 @@ WSTRB 越界/exclusive 冲突等 slave 行为改造）。
 ### 更新后剩余
 FI-009/010/011（multi-ID 响应乱序/交织——需 outstanding 读乱序响应注入）、
 FI-012（复位中 traffic）、FI-014（WSTRB 越界——需 slave 数据路径改造）。
+
+## 2026-09-03 · 目录结构正交化（对齐 SKILL SSOT 数据流向）
+
+- 删除 `qualification/`（README/qualification_report → reports/gate_status.md 合并；
+  coverage_report → reports/coverage/；fault_injection.md → reports/mutation/mutation_report.md；
+  known_limitations 验证性限制并入 requirement §23 LIM-007/008，架构边界注记保留）；
+- 删除 `fault_injection/`（case 表与 results 双写消除：FI case 定义在 validation-plan
+  Rule→Negative 映射，结果在 reports/mutation/）；
+- 删除 `metadata/vip.yaml`（Gate 判定→gate_status.md；status/version/quality→registry.yaml）；
+- 删除 `CHANGELOG.md`（开发期不维护；版本语义并入 run_log 版本小节，release 阶段汇出）；
+- `reports/quality/run_log.md` → `reports/run_log.md`；
+- 引用同步：README（重写目录树/交付清单）、requirement §23（LIM-007/008 新增）、
+  validation-plan/architecture/rtm/user-guide 路径更新。

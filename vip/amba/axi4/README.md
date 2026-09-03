@@ -12,61 +12,50 @@
 
 ## 状态
 
-`Qualifying`：**G0（1.0.0-g0-baseline）→ G1（运行时模型冻结）→ G2（VCS 编译 + unit 79/79）
-→ G3（full 9 tier 全绿）→ G5 主体（qualification 报告生成）**。
+Gate 判定唯一来源：[reports/gate_status.md](reports/gate_status.md)。
+当前：**G0/G1/G2/G3 PASS；G5 PARTIAL（mutation 100% 闭环，G4 覆盖闭合未完成）；G4/G6 NOT_RUN**。
 
-当前进度（2026-09-02）：
 - **self_test 9 tier 全 PASS**：smoke/feature/corner/negative/random/stress/concurrent/error/ral；
-- **error tier 闭环**：E1 RUL-017（burst 缩短）checker 精确检出（VALIDATED）；E2 RUL-011 SVA 诚实 NOT_RUN；
-- **RAL 定向验证 PASS**（adapter reg2bus/bus2reg + predictor + 物理 memory）；
-- **Unit Test 79/79 PASS**（semantic/memory/transaction golden vectors）；
-- **FuseSoC `.core` 生成 + qualification 证据包**（coverage/fault_injection/limitations/RTM/qualification_report）；
-- **剩余（G4）**：四层覆盖闭合、E2（stall 时序）、C3（decouple clocking 沿）、outstanding 读异步化。
+- **mutation 闭环**：negative 4/4 + error E1 2/2 = 100%（E2 RUL-011 SVA 诚实 NOT_RUN）；
+- **RAL 定向验证 PASS**（adapter + predictor + 物理 memory 读回一致）；
+- **L1 Unit Test 79/79 PASS**；
+- **剩余（G4）**：四层覆盖闭合、E2（stall 时序）、C3（decouple clocking 沿）、outstanding 读异步化
+  （限制登记于 [requirement §23 LIM-007/008](docs/requirement.md)）。
 
 ## 目录
 
 ```text
 vip/amba/axi4/
-├── README.md               # 本文件（总览 + 交付物清单）
-├── CHANGELOG.md            # 版本历史（待建）
-├── docs/                   # 文档
-│   ├── requirement.md      # 需求规格（AXI4-REQ-xxx，G0）
-│   └── architecture.md     # 架构与设计（39 章模板，G1）
-├── src/                    # VIP 源码（已开发，VCS 编译通过）
-│   ├── axi4_types_pkg.sv   # 类型/枚举/编解码（含 lock/exclusive/region）
-│   ├── axi4_if.sv          # interface + clocking block + modport（完整信号集对齐 HWIF）
-│   ├── axi4_pkg.sv         # 包入口
-│   ├── axi4_configuration.sv / axi4_status.sv / axi4_memory.sv
-│   ├── transaction/        # axi4_item（master/slave/payload_store）
-│   ├── agent/              # monitor / sequencer / driver / agent（master+slave）
-│   ├── sequences/          # base / read / write / access / default / smoke
-│   ├── coverage/           # axi4_coverage（四层覆盖）
-│   ├── checker/            # axi4_checker + axi4_assertions（SVA）
-│   └── env/                # axi4_env + axi4_violation_injector
-├── self_test/              # VIP Self Test（Makefile + filelist + tb；smoke 通过）
-├── fault_injection/        # 错误注入案例（待建）
-├── examples/               # 最小集成示例 DUT（待建）
-├── fusesoc/                # FuseSoC core（gen-core 生成）
-├── qualification/          # Qualification 证据（RTM/report/fault/coverage/limitations）
-└── reports/                # 编译/lint/回归/覆盖/变异报告
+├── README.md               # 本文件
+├── docs/                   # requirement / architecture / validation-plan / rtm / user-guide
+├── src/                    # VIP 源码（types/if/config/status/memory/pkg/transaction/agent/
+│                           #  sequences/coverage/checker/env，VCS 编译通过）
+├── self_test/              # 9 tier 回归（Makefile + filelist + tb）
+├── examples/               # 最小集成示例 DUT
+└── reports/                # 唯一报告出口：run_log / gate_status / mutation/ / coverage/
 ```
+
+> 开发期不维护 CHANGELOG.md（版本语义记于 reports/run_log.md 版本小节；
+> CHANGELOG 由 release 阶段一次性汇出）；不设 qualification/、fault_injection/、metadata/
+> 独立目录（Gate 判定在 reports/gate_status.md，FI case 在 validation-plan，Limitations 在 requirement §23）。
 
 ## 交付物清单
 
 | 交付物 | 路径 | 状态 |
 | --- | --- | --- |
-| 需求规格 | `docs/requirement.md` | ✅ G0（1.0.0-g0-baseline） |
-| 架构与设计 | `docs/architecture.md` | ✅ G1（0.4.0-draft，运行时模型冻结） |
-| 源代码 | `src/` | ✅ G2（VCS 编译 + 全回归 6/6 PASS） |
-| 验证方案 | `docs/validation-plan.md` | ✅ Freeze（RUL mapping 校正 + G3~G6 分层） |
-| 自验证 | `self_test/` | ✅ 6 tier（smoke/feature/corner/negative/random/stress） |
-| 追溯矩阵 | `docs/rtm.md` | ✅ Draft（G3 首轮证据，诚实标注 NOT_RUN/PARTIAL） |
-| 用户指南 | `docs/user-guide.md` | ✅ Draft |
-| 示例 | `examples/` | ⬜ 待建 |
-| FuseSoC Core | `aixsilicon_vip_axi4_1.0.0.core` | ⬜ gen-core 生成 |
-| 元数据 | `metadata/vip.yaml` | ⬜ 待建 |
-| Qualification 证据 | `qualification/` | ⬜ 待建 |
-| CHANGELOG | `CHANGELOG.md` | ✅（S07 记录） |
+| 需求规格 | `docs/requirement.md` | G0 PASS（1.0.0-g0-baseline） |
+| 架构与设计 | `docs/architecture.md` | G1 PASS（0.4.0-draft，运行时模型冻结） |
+| 验证方案 | `docs/validation-plan.md` | Freeze（RUL mapping 校正 + G3~G6 分层） |
+| 追溯矩阵 | `docs/rtm.md` | Draft（诚实标注 NOT_RUN/PARTIAL，G4 收尾） |
+| 用户指南 | `docs/user-guide.md` | Draft |
+| 源代码 | `src/` | G2 PASS（VCS 编译 + 9/9 全回归） |
+| 自验证 | `self_test/` | 9 tier（smoke/feature/corner/negative/random/stress/concurrent/error/ral） |
+| Gate 判定 | `reports/gate_status.md` | 持续更新 |
+| 执行日志 | `reports/run_log.md` | 唯一运行日志 |
+| Mutation 报告 | `reports/mutation/mutation_report.md` | 已闭环注入 100%（E2 NOT_RUN 如实） |
+| 覆盖率报告 | `reports/coverage/coverage_report.md` | 骨架（G4） |
+| 示例 | `examples/` | 待建 |
+| FuseSoC Core | `aixsilicon_vip_axi4_1.0.0.core` | 已生成（gen-core + vip-check） |
 
 ## 自验证运行
 
@@ -74,15 +63,11 @@ vip/amba/axi4/
 # 编译（VCS，UVM 1.2；-full64 适配本机链接）
 make -C self_test compile
 
-# smoke 自验证
-make -C self_test smoke
-```
+# 全回归（9 tier）
+make -C self_test full
 
-## 开发流程
-
-```text
-vip-requirement → vip-architecture → vip-development → vip-test → vip-coverage
-→ vip-qualification → vip-release → 发布（G6）
+# 功能覆盖（smoke 基线）
+make -C self_test cov
 ```
 
 ## 设计要点（vs tvip-axi 参考）

@@ -1,0 +1,55 @@
+CAPI=2:
+# apb VIP — FuseSoC Core（由 vip-development-suite gen-core 生成）
+name: aixsilicon:vip:apb:1.0.0
+
+description: >-
+  AIXSILICON apb VIP（APB3/APB4/APB5，Requester/Completer/Passive，
+  Checker+SVA-first，Coverage，RAL）。
+
+filesets:
+  rtl:
+    files:
+      - src/apb_types_pkg.sv
+      - src/apb_if.sv
+      - src/apb_pkg.sv
+      - src/apb_sva_bind.sv
+      - src/agent/apb_agent.sv
+      - src/agent/apb_master_driver.sv
+      - src/agent/apb_monitor.sv
+      - src/agent/apb_sequencer.sv
+      - src/agent/apb_slave_driver.sv
+      - src/checker/apb_protocol_sva.sv
+      - src/checker/apb_violation.sv
+      - src/coverage/apb_coverage.sv
+      - src/env/apb_env.sv
+      - src/ral/apb_ral.sv
+      - src/sequences/apb_sequences.sv
+      - src/transaction/apb_item.sv
+    file_type: systemVerilogSource
+
+  selftest:
+    files:
+      - self_test/apb_smoke_tb.sv
+      - self_test/apb_smoke_env.sv
+      - self_test/apb_smoke_test.sv
+      - self_test/apb_feature_test.sv
+      - self_test/apb_corner_test.sv
+      - self_test/apb_error_test.sv
+      - self_test/apb_random_test.sv
+    file_type: systemVerilogSource
+
+targets:
+  default:
+    filesets: [rtl]
+    description: 供其他 Core 依赖的默认包
+  lint:
+    filesets: [rtl]
+    description: 静态检查入口
+  smoke:
+    filesets: [rtl, selftest]
+    toplevel: [apb_smoke_tb]
+    description: 最小闭环
+  regression:
+    filesets: [rtl, selftest]
+    toplevel: [apb_smoke_tb]
+    description: 标准回归入口

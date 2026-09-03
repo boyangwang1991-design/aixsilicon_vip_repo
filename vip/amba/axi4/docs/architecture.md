@@ -626,7 +626,7 @@ V1.0 规划中（N/A），V2.0 支持（REQ-REC-001）。
 
 # 32. Machine-Readable Capability（必填）
 
-`metadata/vip.yaml` 描述（REQ-API-012）：
+Machine-readable 摘要（REQ-API-012；承载于 reports/gate_status.md，metadata/vip.yaml 已按正交规则取消）：
 
 ```yaml
 vip:
@@ -667,7 +667,7 @@ axi4/
 ├── examples/      # 最小集成示例 DUT（规划）
 ├── docs/          # requirement / architecture / validation-plan / rtm / user-guide
 ├── fusesoc/       # .core（gen-core 生成）
-└── qualification/ # RTM / reports / evidence
+└── reports/       # run_log / gate_status / mutation / coverage
 ```
 
 Build Interface：`filelist.f` + `Makefile`（vcs 已验证，`-full64 -ntb_opts uvm-1.2`）+ FuseSoC Core。
@@ -849,4 +849,4 @@ axi4 VIP
 | 约束明确 | ✅ |
 | G1 Checklist 通过 | ⏳ 8 项运行时模型待冻结（§38）—— 冻结后正式 G1 PASS |
 
-> 架构变更需更新本文件 + CHANGELOG，并同步 requirement/validation-plan。
+> 架构变更需更新本文件，并同步 requirement/validation-plan（版本语义变更记于 reports/run_log.md 版本小节）。

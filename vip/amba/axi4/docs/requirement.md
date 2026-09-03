@@ -605,7 +605,7 @@ timeout count
 | AXI4-REQ-ENG-001 | 仿真器支持 | VCS（UVM 1.2，`-ntb_opts uvm-1.2`）；Xcelium/DSim 需验证 |
 | AXI4-REQ-ENG-002 | 编译入口 | `Makefile`（vcs/xcelium 双入口）+ `filelist.f`；正式交付 FuseSoC `.core` |
 | AXI4-REQ-ENG-003 | 回归分层 | smoke/feature/full（`vip_tool.py regression --tier`）；Profile 回归 `--profile axi4/axi4lite` |
-| AXI4-REQ-ENG-004 | 回归记录 | 统一写入 `reports/quality/run_log.md`，与 Evidence Index 关联 |
+| AXI4-REQ-ENG-004 | 回归记录 | 统一写入 `reports/run_log.md`，与 Evidence Index 关联 |
 
 UVM：UVM 1.2；SystemVerilog：标准；Build：filelist/Makefile/FuseSoC；Package：仅暴露 `axi4_pkg`/`axi4_if`（Public）。
 
@@ -656,6 +656,12 @@ Public API 遵循语义化版本兼容；同 major 内不得破坏 transaction/c
 | LIM-004 | AXI3 兼容（locked / write-data interleaving）不支持 | N/A |
 | LIM-005 | 仿真器：Xcelium / DSim 未实测 | 发布前验证 |
 | LIM-006 | AXI4-Lite max outstanding = 1（Implementation Profile，非协议能力） | **Current: V1.0；Planned Removal: V1.x / V2.0** |
+| LIM-007 | **E2 unstable payload（RUL-011 SVA）未检出**：注入翻转发生在 W stalled 期，master/slave clocking 沿错位使 SVA 窗口未命中；且 stall 窗依赖 slave FIXED=2 未保证触发 | G4 统一采样沿（`@(posedge vif.aclk)` 顶层信号）+ 确定性 stall |
+| LIM-008 | **C3 W-before-AW 解耦（PRO-019）回环断言未接入**：slave 预收线程与 master clocking 采样错位 → 预收漏采（驱动实现保留，验证 NOT_RUN）；outstanding 读异步化/多 ID 乱序交织完整并发未验证 | G4 per-beat 所有权仲裁 + 独立 PR（读路径异步化） |
+
+> **架构边界（设计决策，非缺陷）**：monitor 不直接更新 memory（§14 冻结）；
+> W 无 ID 按到达顺序归属；RAL adapter 单拍（burst_length=1，符合 VER-014）。
+> 架构边界详见 architecture.md，不计入 LIM。
 
 ---
 
@@ -833,7 +839,7 @@ Self-Test + RTM + Coverage + Mutation + Regression + Qualification（REQ-QLF-001
 - **Exclusive 语义**：`awlock/arlock=1` 表达 **exclusive access**（REQ-PRO-016/RUL-016），**不表达** AXI3 式 locked transaction；
 - **AWATOP 边界**：`awatop` 为 HWIF superset 信号（AXI5/AMBA5 Atomic），AXI4 profile 下驱动/钳位为非原子值、不激活（非 AXI4 capability）；
 - tvip-axi 参考接口仅核心信号与 HWIF 一致，**不得直接照搬**（缺 lock/region/atop/user、narrow/unaligned/strobe 语义）；
-- VIP **不重复定义**接口契约；HWIF 契约变更 → 本需求同步更新 + CHANGELOG 记录。
+- VIP **不重复定义**接口契约；HWIF 契约变更 → 本需求同步更新（版本语义变更记于 reports/run_log.md 版本小节）。
 
 ---
 

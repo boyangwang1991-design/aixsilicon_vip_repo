@@ -106,8 +106,8 @@ Deprecated（保留以保证已有项目可复现）
 |----------------|------|
 | 总条目（vips） | 52   |
 | qualified      | 0    |
-| developing     | 1    |
-| planned        | 51   |
+| developing     | 2    |
+| planned        | 50   |
 | deprecated     | 0    |
 | 准入率         | 0.0% |
 
@@ -119,7 +119,7 @@ Deprecated（保留以保证已有项目可复现）
 
 | 类别           | qualified | developing | planned | 合计 |
 |----------------|-----------|------------|---------|------|
-| vip/amba       | 0         | 1          | 7       | 8    |
+| vip/amba       | 0         | 2          | 6       | 8    |
 | vip/chip       | 0         | 0          | 11      | 11   |
 | vip/common     | 0         | 0          | 4       | 4    |
 | vip/debug      | 0         | 0          | 3       | 3    |
@@ -151,16 +151,16 @@ Deprecated（保留以保证已有项目可复现）
 
 #### vip/amba（8）
 
-| ID      | VIP                             | 状态       | Profile     | 优先级 | 质量(M/Qual) | 版本 | 功能                                                                           |
-|---------|---------------------------------|------------|-------------|--------|--------------|------|--------------------------------------------------------------------------------|
-| VIP-001 | [axi4](vip/amba/axi4/README.md) | developing | FULL_UVM    | P0     | M0 / NOT_RUN | -    | Master/Slave/Monitor/Checker/Coverage、outstanding、out-of-order、4KB boundary |
-| VIP-002 | axi4_lite                       | planned    | FULL_UVM    | P0     | M0 / NOT_RUN | -    | Master/Slave/Monitor/Checker                                                   |
-| VIP-003 | axi_stream                      | planned    | LIGHTWEIGHT | P0     | M0 / NOT_RUN | -    | Source/Sink/Monitor/Packet Check、TKEEP/TLAST                                  |
-| VIP-004 | apb4                            | planned    | FULL_UVM    | P0     | M0 / NOT_RUN | -    | Master/Slave/Monitor/Checker、wait state、slave error                          |
-| VIP-005 | ahb_lite                        | planned    | FULL_UVM    | P0     | M0 / NOT_RUN | -    | Master/Slave/Monitor/Checker、burst、split                                     |
-| VIP-101 | ace_lite                        | planned    | FULL_UVM    | P1     | M0 / NOT_RUN | -    | Coherency-lite transaction verification                                        |
-| VIP-201 | ace                             | planned    | FULL_UVM    | P2     | M0 / NOT_RUN | -    | Cache coherency verification                                                   |
-| VIP-202 | chi                             | planned    | FULL_UVM    | P2     | M0 / NOT_RUN | -    | Coherent hub interface verification                                            |
+| ID      | VIP                             | 状态       | Profile     | 优先级 | 质量(M/Qual) | 版本 | 功能                                                                                          |
+|---------|---------------------------------|------------|-------------|--------|--------------|------|-----------------------------------------------------------------------------------------------|
+| VIP-001 | [axi4](vip/amba/axi4/README.md) | developing | FULL_UVM    | P0     | M0 / NOT_RUN | -    | Master/Slave/Monitor/Checker/Coverage、outstanding、out-of-order、4KB boundary                |
+| VIP-002 | axi4_lite                       | planned    | FULL_UVM    | P0     | M0 / NOT_RUN | -    | Master/Slave/Monitor/Checker                                                                  |
+| VIP-003 | axi_stream                      | planned    | LIGHTWEIGHT | P0     | M0 / NOT_RUN | -    | Source/Sink/Monitor/Packet Check、TKEEP/TLAST                                                 |
+| VIP-004 | [apb](vip/amba/apb/README.md)   | developing | FULL_UVM    | P0     | M0 / NOT_RUN | -    | APB3/4/5 Master/Slave/Monitor/Checker/SVA、wait state、slave error、RME/PNSE、check_type、RAL |
+| VIP-005 | ahb_lite                        | planned    | FULL_UVM    | P0     | M0 / NOT_RUN | -    | Master/Slave/Monitor/Checker、burst、split                                                    |
+| VIP-101 | ace_lite                        | planned    | FULL_UVM    | P1     | M0 / NOT_RUN | -    | Coherency-lite transaction verification                                                       |
+| VIP-201 | ace                             | planned    | FULL_UVM    | P2     | M0 / NOT_RUN | -    | Cache coherency verification                                                                  |
+| VIP-202 | chi                             | planned    | FULL_UVM    | P2     | M0 / NOT_RUN | -    | Coherent hub interface verification                                                           |
 
 #### vip/chip（11）
 
