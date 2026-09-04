@@ -29,7 +29,7 @@ LOG_DIR   ?= build/logs
 FILELIST  := filelist.f
 TOP       := apb_smoke_tb
 
-.PHONY: all unit compile smoke feature corner error random apb5 regression full cov cov_sweep clean
+.PHONY: all unit compile smoke feature corner error random zerowait apb5 regression full cov cov_sweep clean
 
 all: unit compile
 
@@ -105,6 +105,15 @@ random: compile
 	@grep -q "UVM_ERROR :    0" $(LOG_DIR)/random.log || ( echo "FAIL: random"; exit 1 )
 	@echo "PASS: random"
 
+# P4 回归专项：ZERO_WAIT 写读回数据完整性（DUT 锁存语义）
+zerowait: compile
+	@echo "=== RUN ZERO_WAIT write/read-back integrity (P4 regression) ==="
+	$(SIM_DIR)/simv +UVM_TESTNAME=apb_zerowait_rw_test +UVM_VERBOSITY=UVM_LOW \
+		-l $(LOG_DIR)/zerowait.log
+	@grep -q "UVM_ERROR :    0" $(LOG_DIR)/zerowait.log || ( echo "FAIL: zerowait"; exit 1 )
+	@grep -q "UVM_FATAL :    0" $(LOG_DIR)/zerowait.log || ( echo "FAIL: zerowait (UVM_FATAL)"; exit 1 )
+	@echo "PASS: zerowait (ZERO_WAIT read-back integrity)"
+
 # ---------------------------------------------------------------------------
 # APB5 专项（UT13/14/20/21）：独立编译 top=apb_smoke_tb5（HAS_PNSE/PWAKEUP/USER/CHK 全开）
 # 独立 simv 避免与主 tb 的 run_test 冲突
@@ -140,7 +149,7 @@ fi: compile
 		( echo "FAIL: fi（mutation 检出率<100%）"; grep "FI_SUMMARY" $(LOG_DIR)/fi.log; exit 1 )
 	@echo "PASS: fi (mutation detection rate 100%)"
 
-regression: smoke feature corner error random
+regression: smoke feature corner error random zerowait
 	@echo "PASS: regression (all tiers)"
 
 mutation: fi

@@ -500,7 +500,29 @@ seq.start(env.master_agent.sequencer);
 * [ ] reports/gate_status.md 细节随 G4/G5 收尾补全
 * [ ] RAL 实现后补 §29
 
-# 46. Definition of User Guide Complete（必填）
+# 46. config_db 注入注意事项（集成常见坑，P5）
+
+UVM `uvm_config_db` 的精确 scope 只匹配**该路径本身**，不会向更深层子组件级联。
+本 VIP 的 agent 在 build_phase 用 `uvm_config_db::get(this, "", ...)` 读取
+`cfg`/`vif`（`this` 即 agent 自身），而 driver/sequencer 又在 agent 内以更深的
+层级各自 get——因此：
+
+```systemverilog
+// ❌ 精确 scope：只有 agent 自身 build 能取到，driver/sequencer 取不到 → FATAL
+uvm_config_db #(axi4_configuration)::set(this, "master_agent", "cfg", master_cfg);
+
+// ✅ 通配 scope：agent 及其内部 driver/sequencer 都能取到（推荐）
+uvm_config_db #(axi4_configuration)::set(this, "master_agent*", "cfg", master_cfg);
+// 或全通配
+uvm_config_db #(axi4_configuration)::set(null, "*", "cfg", master_cfg);
+```
+
+`vif` 同理（`"master_agent*"` 或 `"*"`）。VIP 自测 env
+（`axi4_smoke_env.sv`）即用 `set(this, "master_agent", ...)` + agent 内部
+build 读取的组合，但对外集成建议一律用通配 scope，避免精确 scope 不级联导致
+的 driver `vif`/`cfg` FATAL。
+
+# 47. Definition of User Guide Complete（必填）
 
 当用户可仅凭本文完成：编译、集成、配置、激励、观察、检查、错误注入、故障定位时
 视为完成。当前达成主体（G3 状态对应实现）；RAL/metadata 交付后补齐剩余章节。

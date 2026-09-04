@@ -74,6 +74,19 @@ module axi4_unit_transaction;
     check_int("cfg_lite_maxlen", cfg.max_burst_length, 1);
     check_int("cfg_lite_dataw", cfg.data_width, 32);
 
+    // P2 回归：手工 new + 赋值（不 randomize）时 default_*ready 必须为 1。
+    // 修复前 soft 约束仅 randomize 生效，new() 不赋初值 → 0 → B/R 通道
+    // ready 恒低、永远握不上（x2p 集成读响应挂死根因）。
+    begin
+      axi4_configuration c;
+      c = axi4_configuration::type_id::create("c_new_no_randomize");
+      check_bit("cfg_new_default_awready", c.default_awready, 1'b1);
+      check_bit("cfg_new_default_wready",  c.default_wready,  1'b1);
+      check_bit("cfg_new_default_bready",  c.default_bready,  1'b1);
+      check_bit("cfg_new_default_arready", c.default_arready, 1'b1);
+      check_bit("cfg_new_default_rready",  c.default_rready,  1'b1);
+    end
+
     // ------------------------------------------------------------------
     // 6. violation injector 纯判定（should_inject 概率边界 + inject 修改）
     // ------------------------------------------------------------------

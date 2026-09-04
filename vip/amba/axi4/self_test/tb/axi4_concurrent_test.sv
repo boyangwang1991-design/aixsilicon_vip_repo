@@ -129,7 +129,7 @@ class axi4_outstanding_seq extends axi4_master_base_seq;
         finish_item(item);
       end
     end
-    // 统一读回校验
+    // 统一读回校验（数据完整性；B 回填由 P1 专项 smoke 断言覆盖）
     for (int i = 0; i < num_writes; i++) begin
       read(32'h0000_A000 + i * 32'h20, rdata);
       if (rdata !== (32'hDADA_0000 + i)) begin

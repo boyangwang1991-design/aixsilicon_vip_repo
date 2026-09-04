@@ -77,6 +77,8 @@ class apb_read_sequence extends apb_base_sequence;
 
   int unsigned num_reads = 8;
   bit [`APB_MAX_ADDR_WIDTH-1:0] base_addr = 'h1000;
+  // 最近一笔读回值（P4 回归：ZERO_WAIT 读数据完整性校验用）
+  bit [`APB_MAX_DATA_WIDTH-1:0] last_data = '0;
 
   function new(string name = "apb_read_sequence");
     super.new(name);
@@ -85,8 +87,10 @@ class apb_read_sequence extends apb_base_sequence;
   virtual task body();
     bit [`APB_MAX_DATA_WIDTH-1:0] d;
     bit err;
-    for (int i = 0; i < num_reads; i++)
+    for (int i = 0; i < num_reads; i++) begin
       do_read(base_addr + i*4, d, err);
+      last_data = d;
+    end
   endtask
 endclass
 

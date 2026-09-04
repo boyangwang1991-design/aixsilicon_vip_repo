@@ -175,11 +175,16 @@ fi: compile
 
 regression: full
 
-# full = 9 tier 稳定回归（含 concurrent + error + ral）。
+# P1 回归专项：唯一 ID 写事务 B 后台线程回填完整性（disable fork 修复验证）
+p1b: compile
+	@echo "=== RUN axi4 P1 B-backfill regression (unique-id writes) ==="
+	$(MAKE) _sim_run UVM_TESTNAME=axi4_p1b_test ALLOW_ERRORS=0
+
+# full = 10 tier 稳定回归（含 concurrent + error + ral + p1b）。
 # error tier：E1（RUL-017 burst 缩短）已闭环（MIN_ERRORS=1）；E2（RUL-011 SVA）诚实 NOT_RUN。
 # RAL tier：adapter reg2bus/bus2reg + predictor + 物理 memory 一致（VER-014）。
 full: compile
-	@echo "=== RUN axi4 full regression (9 tests) ==="
+	@echo "=== RUN axi4 full regression (10 tests) ==="
 	$(MAKE) _sim_run UVM_TESTNAME=axi4_smoke_test ALLOW_ERRORS=0
 	$(MAKE) _sim_run UVM_TESTNAME=axi4_feature_test ALLOW_ERRORS=0
 	$(MAKE) _sim_run UVM_TESTNAME=axi4_corner_test ALLOW_ERRORS=1
@@ -189,6 +194,7 @@ full: compile
 	$(MAKE) _sim_run UVM_TESTNAME=axi4_concurrent_test ALLOW_ERRORS=0
 	$(MAKE) _sim_run_min UVM_TESTNAME=axi4_error_test MIN_ERRORS=1
 	$(MAKE) _sim_run UVM_TESTNAME=axi4_ral_test ALLOW_ERRORS=0
+	$(MAKE) _sim_run UVM_TESTNAME=axi4_p1b_test ALLOW_ERRORS=0
 
 # 单测试运行入口（make _sim_run UVM_TESTNAME=<name> ALLOW_ERRORS=<expected>）
 # 判定：UVM_ERROR 计数 == ALLOW_ERRORS 且 UVM_FATAL == 0 → PASS

@@ -84,11 +84,32 @@ class apb_slave_driver extends uvm_driver #(apb_item);
       if (cfg.slave_response_mode == APB_ZERO_WAIT) begin
         vif.slave_cb.pready  <= 1'b1;
         vif.slave_cb.pslverr <= 1'b0;
-        @(posedge vif.pclk);
-        if (vif.psel[0] === 1'b1 && vif.penable === 1'b1) begin
-          // completion 拍（零等待完成：psel&&penable&&pready 常高）
-          // 写合并 memory / 读数据在 completion 驱动
-          build_observed_item();
+        // P4 修复：ZERO_WAIT 下 PREADY 恒高，completion 与 ACCESS 首拍同沿，
+        // DUT（如 x2p APB 引擎）在 (ACCESS && PREADY) 沿锁存 prdata——读数据
+        // 必须在 DUT 的 ACCESS 采样沿**前**就绪。
+        // 采样相位关键（C-9）：master 用 master_cb（output #1，沿后 1ns 生效）；
+        // 若 slave 用 @(posedge)+顶层直读，在沿的 active 区域读到的是沿前旧值，
+        // 识别 SETUP 的时刻恰好是 DUT 的 ACCESS 首拍，prdata 永远赶不上锁存。
+        // 因此 ZERO_WAIT 分支必须用 slave_cb（input #1step，沿前采样）与 master_cb
+        // 对齐：沿前识别 SETUP → 本沿立即预置 prdata（slave_cb output #1，沿后
+        // 生效）→ DUT 下一沿（ACCESS 采样沿前 #1step）锁存到有效读数据。
+        @(vif.slave_cb);
+        if (vif.slave_cb.psel[0] === 1'b1) begin
+          if (vif.slave_cb.penable === 1'b0) begin
+            // SETUP 拍（沿前采样）：预置读数据 + 写合并（cur_req 上一笔已清）
+            cur_req = null;
+            build_observed_item();
+          end
+          else begin
+            // completion 拍（零等待完成：psel&&penable&&pready 常高）：
+            // 读数据已在 SETUP 拍预置（prdata 稳定）；无 SETUP 前导的容错路径
+            // （FI-002 非法注入）兜底采样；完成后清 cur_req 供下一笔。
+            if (cur_req == null) build_observed_item();
+            cur_req = null;
+          end
+        end
+        else begin
+          cur_req = null;   // IDLE：清残留状态
         end
       end
       else begin
@@ -159,6 +180,12 @@ class apb_slave_driver extends uvm_driver #(apb_item);
     it.direction = vif.pwrite ? APB_WRITE : APB_READ;
     it.addr      = vif.paddr;
     it.wdata     = vif.pwdata;
+    // P4-深层修复：strb 必须从总线采样（此前 it.strb 恒 0 → write_mem mask
+    // 全 0 → 写 memory 恒为 0，读回全 0。原实现只采样 direction/addr/wdata，
+    // 漏了 pstrb；enable_strb=1 时 (cur & ~mask)|(wdata & mask)=0）。
+    it.strb = '0;
+    for (int b = 0; b < cfg.data_width/8; b++)
+      it.strb[b] = vif.pstrb_w[b];
     it.start_time = $time;
     if (it.direction == APB_WRITE)
       write_mem(it);

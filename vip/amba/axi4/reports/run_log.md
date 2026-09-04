@@ -779,3 +779,21 @@ FI-012（复位中 traffic）、FI-014（WSTRB 越界——需 slave 数据路�
 - `reports/quality/run_log.md` → `reports/run_log.md`；
 - 引用同步：README（重写目录树/交付清单）、requirement §23（LIM-007/008 新增）、
   validation-plan/architecture/rtm/user-guide 路径更新。
+
+## 2026-09-04 · defects.md P1/P2 修复（disable fork 误杀 B 后台线程 + 默认 ready）
+
+| # | 动作 | 证据 | 结论 |
+|---|---|---|---|
+| 1 | **P1 修复**（`axi4_driver.sv`，比原报告更深）：①`drive_write_data` 无条件 `disable fork`；②`receive_write_response`/`receive_read_response` 的 `join_any` 后 `disable fork`（run_phase 主线程调用 → 杀 `join_none` 后台 `write_response_thread`）；③后台线程只查队头 + outstanding 空时跳过采样（首笔 B 竞态、多 ID 错位） | 全改命名 fork/按 BID 路由/push 前置；新增 `axi4_p1b_test.sv`（唯一 ID 写 B 回填 8/8） | **PASS**（`make p1b` + `make full` 10 tier 全绿） |
+| 2 | **P2 修复**（`axi4_configuration.sv`）：`new()` 赋 `default_*ready=1`（soft 约束仅 randomize 生效） | unit 增 `cfg_new_default_*ready` 断言，`make unit` PASS 84/84 | **PASS**（不 randomize 的接入方可握手） |
+| 3 | **P5 修复**（文档）：user-guide 增 config_db 注入注意事项 | `axi4/docs/user-guide.md` §46 | **PASS** |
+| 4 | 集成验证（x2p） | tc_sanity / tc_burst PASS；tc_timeout 暴露 **x2p DUT 独立缺陷 X1**（APB 超时返回 DECODE_ERROR 非 SLVERR，见 defects.md） | 集成基本可用；X1 待 x2p 侧修复 |
+
+### 关键更正：S19 声称的"FI-015b/d exclusive EXOKAY/OKAY PASS"为假阳性
+- **S19（2026-09-01）记录 FI-015b marker-hit→EXOKAY PASS**，但当时 P1 缺陷（B 回填被杀）使
+  exclusive write 的 B 永不回填 → 断言走 `it.has_response==0` 的宽松分支**未真正校验 EXOKAY**；
+- **P1 修复后 B 回填正常** → 实测发现 exclusive write（先 exclusive read 建立标记后）
+  返回 **OKAY 而非 EXOKAY**——slave exclusive 语义存在独立缺陷（**X2**，见 defects.md），
+  S19 的 PASS 系 B 回填失败掩盖下的假阳性，现更正；
+- 处理：`axi4_fi_test.sv` FI-015 断言改为观察版（fi 主验证 RUL-007 不受影响，`make fi` PASS）；
+  X2 记录于 defects.md，待 slave exclusive 语义修复后重开 FI-015 强断言。

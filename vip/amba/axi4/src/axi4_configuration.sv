@@ -287,6 +287,14 @@ class axi4_configuration extends uvm_object;
     bready_delay          = axi4_delay_configuration::type_id::create("bready_delay");
     arready_delay         = axi4_delay_configuration::type_id::create("arready_delay");
     rready_delay          = axi4_delay_configuration::type_id::create("rready_delay");
+    // P2 修复：默认握手位在 new() 直接赋 1（与 c_default_ready soft 约束一致）。
+    // soft 约束仅在 randomize() 时生效；手工 new + 赋值（不 randomize）的接入方
+    // （如 x2p）若不显式置位会得到 0 → B/R 通道 ready 恒低、永远握不上。
+    default_awready = 1'b1;
+    default_wready  = 1'b1;
+    default_bready  = 1'b1;
+    default_arready = 1'b1;
+    default_rready  = 1'b1;
   endfunction
 
   function void post_randomize();

@@ -116,3 +116,25 @@ make -C self_test full          # unit + regression
 * Completer 为 generic memory-backed responder，不做外设语义 golden（LIM-005）；
 * *CHK 奇校验位级 checker，无独立 parity reference model（LIM-001）；
 * 多 slave decode/mux（interconnect）不在 VIP 范围（LIM-003）。
+
+# 9. config_db 注入注意事项（集成常见坑，P5）
+
+UVM `uvm_config_db` 精确 scope 只匹配**该路径本身**，不会向更深层子组件级联。
+本 VIP 的 agent 在 build_phase 用 `uvm_config_db::get(this, "", "config"/"vif", ...)`
+读取（`this` 即 agent），而 agent 内部 driver/sequencer 又以更深的层级各自 get——
+因此：
+
+```systemverilog
+// ❌ 精确 scope：只有 agent 自身 build 能取到，driver/sequencer 取不到 → FATAL
+uvm_config_db #(apb_config)::set(this, "slave_agent", "config", cfg);
+
+// ✅ 通配 scope：agent 及其内部 driver/sequencer 都能取到（推荐）
+uvm_config_db #(apb_config)::set(this, "slave_agent*", "config", cfg);
+uvm_config_db #(virtual apb_if)::set(this, "slave_agent*", "vif", pif);
+// 或全通配
+uvm_config_db #(apb_config)::set(null, "*", "config", cfg);
+```
+
+VIP 自测 env（`apb_smoke_env.sv:110-114`）即用 `"master_agent*"`/`"slave_agent*"`
+通配。对外集成建议一律用通配 scope，避免精确 scope 不级联导致的 driver
+`vif`/`config` FATAL。

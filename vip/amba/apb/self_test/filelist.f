@@ -11,4 +11,5 @@ apb_corner_test.sv
 apb_error_test.sv
 apb_random_test.sv
 apb_cov_sweep_test.sv
+apb_zerowait_rw_test.sv
 apb_fi_test.sv

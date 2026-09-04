@@ -114,3 +114,13 @@ make -C self_test cov              # 覆盖收集（G4）
 
 - `cr_dir_error` 83%（requirement 98.6%）：WRITE×ABORTED 单 bin。多次 timing reset 实测干扰采样（feature 100%→85%），不作为回归默认注入；后续可在独立 reset-tier（UT08-10 完整 reset 场景）闭合，不改主回归。
 - UT22 X-check（RUL-011/VER-013）、UT16 RAL、UT08-10 独立 reset 场景本轮未差异化执行 → RTM 保持 NOT_RUN。
+
+## 2026-09-04 · defects.md P3/P4/P5 修复（集成 x2p 实测缺陷闭环）
+
+| # | 动作 | 证据 | 结论 |
+|---|---|---|---|
+| 26 | **P3 修复**（`apb_if.sv`）：必选信号（psel/penable/paddr/pwrite/pwdata/prdata/pready/pslverr）去声明初值+initial（VCS ICPSD/ICPSD_INIT 实测 9 错）；可选信号保留 initial 清零（防无驱动 X → SVA F1 误报） | VCS 最小复现（纯声明可被 RTL 结构驱动 PASS）；x2p tc_sanity PASS | **PASS**（VIP 可直接接真实 RTL master） |
+| 27 | **P4 修复**（`apb_slave_driver.sv`）：ZERO_WAIT 用 slave_cb 沿前采样识别 SETUP 预置读数据 + **`build_observed_item` 补采 pstrb**（原 strb 恒 0 → memory 写入恒 0） | 新增 `apb_zerowait_rw_test.sv`（ZERO_WAIT 写读回 8/8）；`make zerowait` PASS | **PASS**（ZERO_WAIT 读回正确） |
+| 28 | **P5 修复**（文档）：user-guide 新增 config_db 注入注意事项（精确 scope 不级联 → 须通配） | `apb/docs/user-guide.md` §9 | **PASS** |
+| 29 | 全量复验 | `make full`（unit 554 + 6 tier + zerowait）+ `make mutation`（100%） | **全 PASS，无回归** |
+| 30 | 集成验证 | x2p tc_sanity / tc_burst PASS（F1 SVA 不再 X 误报；B 回填正常） | 集成可用；tc_timeout 暴露 x2p DUT 独立缺陷（见 defects.md X1） |

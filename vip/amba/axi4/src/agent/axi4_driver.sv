@@ -206,9 +206,12 @@ class axi4_master_driver extends uvm_driver #(axi4_master_item);
         // 翻转 wdata/wstrb**——SVA `(wvalid && !wready) |=> (payload != $past)`
         // 前因是 stall 拍，而翻转须紧随其后；在 stall 采样沿后的付值窗口内
         // 翻转，使 T+1 检查捕获变化（T 为 stall 前因拍）。
+        // P1 修复：RUL-011 监测进程必须用命名 fork + disable <label> 精确终止，
+        // 禁止无条件 disable fork——它会杀掉 run_phase 中 join_none 派生的
+        // write_response_thread() 后台 B 收取线程（写事务 item.response 永远空）。
         if (do_unstable) begin
           fork
-            begin
+            begin : rul011_stall_monitor
               forever begin
                 @(vif.master_cb);
                 if (!(vif.master_cb.wready === 1'b1)) begin
@@ -225,8 +228,10 @@ class axi4_master_driver extends uvm_driver #(axi4_master_item);
           join_none
         end
         do @(vif.master_cb); while (!(vif.master_cb.wready === 1'b1));
-        disable fork;
-        disable fork;
+        // 仅终止本 beat 的 RUL-011 监测进程（若已 fork），不动后台线程
+        if (do_unstable) begin
+          disable rul011_stall_monitor;
+        end
       end
       vif.master_cb.wvalid <= 0;
       vif.master_cb.wlast  <= 0;
@@ -267,7 +272,10 @@ class axi4_master_driver extends uvm_driver #(axi4_master_item);
         end
       end
     join_any
-    disable fork;
+    // P1 修复：禁止无条件 disable fork——它会杀掉 run_phase 派生的
+    // write_response_thread() 后台 B 收取线程。只精确终止本 fork 的两分支。
+    disable b_rx;
+    disable b_to;
     item.response = new[resp.size()];
     foreach (resp[i]) item.response[i] = resp[i];
     item.has_response = 1;
@@ -309,7 +317,9 @@ class axi4_master_driver extends uvm_driver #(axi4_master_item);
         end
       end
     join_any
-    disable fork;
+    // P1 修复：禁止无条件 disable fork（误杀 write_response_thread 后台线程）。
+    disable r_rx;
+    disable r_to;
     item.response = new[resp.size()];
     item.data     = new[rdata.size()];
     foreach (resp[i])  item.response[i] = resp[i];
@@ -327,29 +337,33 @@ class axi4_master_driver extends uvm_driver #(axi4_master_item);
   protected task write_response_thread();
     axi4_master_item wr;
     axi4_response resp[$];
-    bit done_b;
+    int match_idx;
     forever begin
-      if (outstanding_wr.size() == 0) begin
-        @(vif.master_cb);
-        continue;
-      end
-      wr = outstanding_wr[0];
       resp.delete();
-      done_b = 0;
-      while (!done_b) begin
-        @(vif.master_cb);
-        if (vif.master_cb.bvalid === 1'b1) begin
-          resp.push_back(vif.master_cb.bresp);
-          if (vif.master_cb.bid == wr.id) begin
-            done_b = 1;
-          end
+      @(vif.master_cb);
+      if (vif.master_cb.bvalid !== 1'b1) continue;
+      // P1 修复（B 多 ID 配对 + 早到 B 缓存）：始终采样 bvalid——slave 可能在
+      // item 登记（outstanding_wr.push_back）前就返回 B（响应极快时竞态）；
+      // 原实现 outstanding 为空时跳过采样 → 首笔 B 丢失。按 BID 路由到
+      // outstanding 中第一个 id 匹配且未回填的写 item；无匹配则本轮丢弃
+      // （AXI 中 slave 只对该 master 发 B，未登记的 B 在 push 后由下一轮补采）。
+      match_idx = -1;
+      for (int i = 0; i < outstanding_wr.size(); i++) begin
+        if (outstanding_wr[i].id == vif.master_cb.bid &&
+            !outstanding_wr[i].has_response) begin
+          match_idx = i;
+          break;
         end
       end
-      wr.response    = new[resp.size()];
-      foreach (resp[i]) wr.response[i] = resp[i];
-      wr.has_response = 1;
-      wr.end_response();
-      void'(outstanding_wr.pop_front());
+      if (match_idx >= 0) begin
+        wr = outstanding_wr[match_idx];
+        resp.push_back(vif.master_cb.bresp);
+        wr.response    = new[resp.size()];
+        foreach (resp[j]) wr.response[j] = resp[j];
+        wr.has_response = 1;
+        wr.end_response();
+        outstanding_wr.delete(match_idx);
+      end
     end
   endtask
 
@@ -395,6 +409,11 @@ class axi4_master_driver extends uvm_driver #(axi4_master_item);
       axi4_master_item item;
       seq_item_port.get_next_item(item);
       if (item.is_write()) begin
+        // 写：登记 outstanding 必须先于驱动——slave 可能在 W 握手后立即发 B，
+        // 若 push 在 drive 之后，后台线程采样到 B 时 item 尚未登记 → 首笔 B 丢失。
+        // 先登记（has_response=0），再驱动 AW/W，最后 item_done（B 后台收取）。
+        outstanding_wr.push_back(item);
+        item.has_response = 0;
         if (decouple_w_before_aw) begin
           // PRO-019：W before AW 形态——数据先于地址（解耦重建验证）
           drive_write_data(item);
@@ -404,9 +423,6 @@ class axi4_master_driver extends uvm_driver #(axi4_master_item);
           drive_address(item);
           drive_write_data(item);
         end
-        // 写：请求阶段完成即 item_done，B 由后台线程收取（outstanding 并发）
-        outstanding_wr.push_back(item);
-        item.has_response = 0;
         seq_item_port.item_done();
       end
       else begin

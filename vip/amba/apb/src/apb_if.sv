@@ -52,16 +52,19 @@ interface apb_if #(
   logic sva_enable = 1'b1;
 
   // ===========================================================================
-  // APB3 必选信号（Y）——含复位安全初值（RUL-008：复位期 PSEL/PENABLE=0）
+  // APB3 必选信号（Y）。P3 修复：不再用声明初值 + initial 块驱动（VCS 视其为
+  // procedural 驱动源，真实 RTL APB-master 结构驱动时报 ICPSD/ICPSD_INIT 编译
+  // 失败）。改为纯声明，复位期 0 由 Requester driver / SVA（G1 RUL-008）保证；
+  // 复位释放前 RTL master 输出的确定值由外部 reset 语义保证。
   // ===========================================================================
-  logic [NUM_SLAVES-1:0]   psel     = '0;
-  logic                    penable  = 1'b0;
-  logic [ADDR_WIDTH-1:0]   paddr    = '0;
-  logic                    pwrite   = 1'b0;
-  logic [DATA_WIDTH-1:0]   pwdata   = '0;
-  logic [DATA_WIDTH-1:0]   prdata   = '0;
-  logic                    pready   = 1'b0;   // OO-1：VIP 端口恒存在
-  logic                    pslverr  = 1'b0;   // OO-1
+  logic [NUM_SLAVES-1:0]   psel;
+  logic                    penable;
+  logic [ADDR_WIDTH-1:0]   paddr;
+  logic                    pwrite;
+  logic [DATA_WIDTH-1:0]   pwdata;
+  logic [DATA_WIDTH-1:0]   prdata;
+  logic                    pready;    // OO-1：VIP 端口恒存在
+  logic                    pslverr;   // OO-1
 
   // ===========================================================================
   // 可选信号（*_w 命名；能力关闭时 driver/monitor 恒 0——C-8 存在性语义）
@@ -87,7 +90,13 @@ interface apb_if #(
   logic                       pslverrchk_w;   // OC
   logic                       pwakeupchk_w;   // C：Check & Wakeup
 
-  // 复位安全：可写信号默认值（可选信号恒 0 语义）
+  // ===========================================================================
+  // 复位安全清零（可选信号专用）：P3 修复——必选信号（psel/penable/paddr/pwrite/
+  // pwdata/prdata/pready/pslverr）被真实 RTL APB-master 结构驱动，带初值会触发
+  // ICPSD/ICPSD_INIT，故改为纯声明；可选信号（pstrb_w/pprot_w/*user_w/pwakeup_w/
+  // pnse_w/*chk_w）RTL 一般空接/不驱动，保留 initial 清零可消除无驱动 X
+  // （否则 SVA 如 F1_read_strb_zero 对 X 判定失败）。
+  // ===========================================================================
   initial begin
     pstrb_w     = '0;
     pprot_w     = '0;
