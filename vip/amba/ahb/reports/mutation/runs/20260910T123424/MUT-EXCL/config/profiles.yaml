@@ -1,0 +1,51 @@
+schema_version: 1
+vip_version: 0.1.0
+profiles:
+  lite32:
+    protocol: AHB_LITE
+    issue: C
+    addr_width: 32
+    data_width: 32
+    burst_width: 3
+    prot_width: 4
+    master_width: 0
+    user_req_width: 0
+    user_data_width: 0
+    user_resp_width: 0
+    secure: false
+    exclusive: false
+    strobe: false
+    parity: false
+    testbench: ahb_smoke_tb
+  ahb5_128:
+    protocol: AHB5
+    issue: C
+    addr_width: 17
+    data_width: 128
+    burst_width: 3
+    prot_width: 7
+    master_width: 4
+    user_req_width: 9
+    user_data_width: 16
+    user_resp_width: 3
+    secure: true
+    exclusive: true
+    strobe: true
+    parity: true
+    testbench: ahb_extensions_tb
+  classic32:
+    protocol: AHB_CLASSIC
+    issue: A
+    addr_width: 32
+    data_width: 32
+    burst_width: 3
+    prot_width: 4
+    master_width: 4
+    user_req_width: 0
+    user_data_width: 0
+    user_resp_width: 0
+    secure: false
+    exclusive: false
+    strobe: false
+    parity: false
+    testbench: ahb_classic_agent_tb

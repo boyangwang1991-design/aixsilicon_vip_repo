@@ -1,0 +1,7 @@
+schema_version: 1
+# Required contract acceptance is larger than the development full target.
+required_tiers: [unit, vectors, smoke, negative, extensions, burst, error, reset, ral, classic, system, mutation, stress, portability]
+fixed_seeds: {start: 1, stop: 100}
+minimum_effective_beats: 1000000
+required_tools: [vcs, second_commercial]
+required_uvm: ['1.2', 'IEEE1800.2']

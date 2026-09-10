@@ -1,0 +1,224 @@
+CAPI=2:
+name: aixsilicon:vip:ahb:0.1.0
+description: AHB VIP development candidate; see reports for qualification state
+filesets:
+  rtl:
+    files:
+    - src/ahb_types_pkg.sv
+    - src/ahb_if.sv
+    - src/ahb_pkg.sv
+    - src/checker/ahb_assertions.sv
+    - src/classic/ahb_arbiter.sv
+    - src/transaction/ahb_item.sv:
+        is_include_file: true
+        include_path: src
+    - src/ahb_config.sv:
+        is_include_file: true
+        include_path: src
+    - src/checker/ahb_violation.sv:
+        is_include_file: true
+        include_path: src
+    - src/checker/ahb_checker.sv:
+        is_include_file: true
+        include_path: src
+    - src/model/ahb_memory.sv:
+        is_include_file: true
+        include_path: src
+    - src/model/ahb_devices.sv:
+        is_include_file: true
+        include_path: src
+    - src/classic/ahb_classic_model.sv:
+        is_include_file: true
+        include_path: src
+    - src/agent/ahb_monitor.sv:
+        is_include_file: true
+        include_path: src
+    - src/agent/ahb_sequencer.sv:
+        is_include_file: true
+        include_path: src
+    - src/agent/ahb_driver.sv:
+        is_include_file: true
+        include_path: src
+    - src/agent/ahb_slave_driver.sv:
+        is_include_file: true
+        include_path: src
+    - src/coverage/ahb_coverage.sv:
+        is_include_file: true
+        include_path: src
+    - src/agent/ahb_agent.sv:
+        is_include_file: true
+        include_path: src
+    - src/sequences/ahb_base_seq.sv:
+        is_include_file: true
+        include_path: src
+    - src/sequences/ahb_smoke_seq.sv:
+        is_include_file: true
+        include_path: src
+    - src/scoreboard/ahb_scoreboard.sv:
+        is_include_file: true
+        include_path: src
+    - src/scoreboard/ahb_bridge_scoreboard.sv:
+        is_include_file: true
+        include_path: src
+    - src/ral/ahb_ral.sv:
+        is_include_file: true
+        include_path: src
+    - src/env/ahb_env.sv:
+        is_include_file: true
+        include_path: src
+    file_type: systemVerilogSource
+  smoke:
+    files:
+    - self_test/tb/ahb_smoke_env.sv:
+        is_include_file: true
+        include_path: self_test/tb
+    - self_test/tb/ahb_smoke_tb.sv
+    file_type: systemVerilogSource
+  vectors:
+    files:
+    - self_test/tb/ahb_vectors_tb.sv
+    file_type: systemVerilogSource
+  negative:
+    files:
+    - self_test/tb/ahb_negative_tb.sv
+    file_type: systemVerilogSource
+  extensions:
+    files:
+    - self_test/tb/ahb_extensions_tb.sv
+    file_type: systemVerilogSource
+  scenarios:
+    files:
+    - self_test/tb/ahb_scenarios_tb.sv
+    file_type: systemVerilogSource
+  classic:
+    files:
+    - self_test/tb/ahb_classic_tb.sv
+    file_type: systemVerilogSource
+  classic_agent:
+    files:
+    - self_test/tb/ahb_classic_agent_tb.sv
+    file_type: systemVerilogSource
+  ral:
+    files:
+    - self_test/tb/ahb_ral_tb.sv
+    file_type: systemVerilogSource
+  system:
+    files:
+    - self_test/tb/ahb_system_tb.sv
+    file_type: systemVerilogSource
+  widths:
+    files:
+    - self_test/tb/ahb_widths_tb.sv
+    file_type: systemVerilogSource
+  unit:
+    files:
+    - unit_test/ahb_unit_classic.sv:
+        is_include_file: true
+        include_path: unit_test
+    - unit_test/ahb_unit_models.sv:
+        is_include_file: true
+        include_path: unit_test
+    - unit_test/ahb_unit_parity.sv:
+        is_include_file: true
+        include_path: unit_test
+    - unit_test/unit_test_runner.sv:
+        is_include_file: true
+        include_path: unit_test
+    - unit_test/ahb_unit_tb.sv
+    file_type: systemVerilogSource
+targets:
+  default:
+    filesets:
+    - rtl
+  smoke:
+    default_tool: vcs
+    filesets:
+    - rtl
+    - smoke
+    toplevel: ahb_smoke_tb
+    tools: &id001
+      vcs:
+        vcs_options:
+        - -full64
+        - -ntb_opts
+        - uvm-1.2
+        - -timescale=1ns/1ps
+        run_options:
+        - -no_save
+  vectors:
+    default_tool: vcs
+    filesets: &id002
+    - rtl
+    - vectors
+    toplevel: ahb_vectors_tb
+    tools: *id001
+  negative:
+    default_tool: vcs
+    filesets:
+    - rtl
+    - negative
+    toplevel: ahb_negative_tb
+    tools: *id001
+  extensions:
+    default_tool: vcs
+    filesets:
+    - rtl
+    - extensions
+    toplevel: ahb_extensions_tb
+    tools: *id001
+  scenarios:
+    default_tool: vcs
+    filesets:
+    - rtl
+    - scenarios
+    toplevel: ahb_scenarios_tb
+    tools: *id001
+  classic:
+    default_tool: vcs
+    filesets:
+    - rtl
+    - classic
+    toplevel: ahb_classic_tb
+    tools: *id001
+  classic_agent:
+    default_tool: vcs
+    filesets:
+    - rtl
+    - classic_agent
+    toplevel: ahb_classic_agent_tb
+    tools: *id001
+  ral:
+    default_tool: vcs
+    filesets:
+    - rtl
+    - ral
+    toplevel: ahb_ral_tb
+    tools: *id001
+  system:
+    default_tool: vcs
+    filesets:
+    - rtl
+    - system
+    toplevel: ahb_system_tb
+    tools: *id001
+  widths:
+    default_tool: vcs
+    filesets:
+    - rtl
+    - widths
+    toplevel: ahb_widths_tb
+    tools: *id001
+  unit_sim:
+    default_tool: vcs
+    filesets:
+    - rtl
+    - unit
+    toplevel: ahb_unit_tb
+    tools: *id001
+  regression:
+    default_tool: vcs
+    filesets: *id002
+    toplevel: ahb_vectors_tb
+    tools: *id001
+    description: Independent waveform regression; use make full for complete development
+      matrix

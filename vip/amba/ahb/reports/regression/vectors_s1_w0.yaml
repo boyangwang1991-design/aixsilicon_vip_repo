@@ -1,0 +1,46 @@
+timestamp: '2026-09-10T12:29:03Z'
+seed: 1
+tool: vcs
+cases:
+- tier: vectors
+  seed: 1
+  wait: 0
+  command:
+  - vcs
+  - -full64
+  - -sverilog
+  - -ntb_opts
+  - uvm-1.2
+  - -timescale=1ns/1ps
+  - -f
+  - vectors.f
+  - -top
+  - ahb_vectors_tb
+  - -Mdir=/home/eda/workspace/aixsilicon_workflow/repos/aixsilicon_vip_repo/vip/amba/ahb/self_test/build/current/vectors/csrc
+  - -o
+  - /home/eda/workspace/aixsilicon_workflow/repos/aixsilicon_vip_repo/vip/amba/ahb/self_test/build/current/vectors/simv
+  compile_log: reports/logs/20260910T122903-3a228e28/vectors_compile.log
+  compile_exit: 0
+  compile_seconds: 22.319463648018427
+  status: PASS
+  run_command:
+  - /home/eda/workspace/aixsilicon_workflow/repos/aixsilicon_vip_repo/vip/amba/ahb/self_test/build/current/vectors/simv
+  - -no_save
+  - +ntb_random_seed=1
+  - +WAIT=0
+  - +CASE=vectors
+  - +COUNT=1000
+  run_exit: 0
+  run_seconds: 7.181615843903273
+  log: reports/logs/20260910T122903-3a228e28/vectors_s1_w0.log
+  oracle: AHB_VECTOR_PASS
+source_fingerprint: 3a228e28b3d83fa594d0a7065b24bbf9fa05e255b5a07f1faaded84a935e0d26
+run_id: 20260910T122903-3a228e28
+config_fingerprint: 9278cedf7d4fbac2dfbf245f0c6cf378b5581032cfca4f6f556d30d9d1579b69
+tool_version: "vcs script version : W-2024.09\nmachine name = localhost.localdomain\
+  \ \nmachine type = linux \nmachine os = Linux 4.18.0-553.137.1.el8_10.x86_64  \n\
+  The FLEXlm host ID of this machine is \"000c299df92d\"\nCompiler version = VCS W-2024.09-SP1_Full64\n\
+  VCS Build Date = Dec 03 2024 20:20:03\nIf you need to renew your license, please\
+  \ email this information to your\nAccount Manager. To obtain contact information\
+  \ for your Account Manager\nplease email pass@synopsys.com\n"
+status: PASS

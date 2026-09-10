@@ -1,0 +1,49 @@
+timestamp: '2026-09-10T12:35:14Z'
+seed: 1
+tool: vcs
+cases:
+- tier: negative
+  seed: 1
+  wait: 0
+  command:
+  - vcs
+  - -full64
+  - -sverilog
+  - -ntb_opts
+  - uvm-1.2
+  - -timescale=1ns/1ps
+  - -f
+  - negative.f
+  - -top
+  - ahb_negative_tb
+  - -Mdir=/home/eda/workspace/aixsilicon_workflow/repos/aixsilicon_vip_repo/vip/amba/ahb/reports/mutation/runs/20260910T123424/MUT-ERROR/self_test/build/current/negative/csrc
+  - -o
+  - /home/eda/workspace/aixsilicon_workflow/repos/aixsilicon_vip_repo/vip/amba/ahb/reports/mutation/runs/20260910T123424/MUT-ERROR/self_test/build/current/negative/simv
+  compile_log: reports/logs/20260910T123514-635506da/negative_compile.log
+  compile_exit: 0
+  compile_seconds: 20.51384171808604
+  status: FAIL
+  run_command:
+  - /usr/bin/time
+  - -v
+  - /home/eda/workspace/aixsilicon_workflow/repos/aixsilicon_vip_repo/vip/amba/ahb/reports/mutation/runs/20260910T123424/MUT-ERROR/self_test/build/current/negative/simv
+  - -no_save
+  - +ntb_random_seed=1
+  - +WAIT=0
+  - +CASE=negative
+  - +COUNT=1000
+  run_exit: 0
+  run_seconds: 6.179759289021604
+  log: reports/logs/20260910T123514-635506da/negative_s1_w0.log
+  oracle: AHB_NEGATIVE_PASS
+  peak_rss_kib: 155104
+source_fingerprint: 635506da5540b0e70f9a6a4ba8e23945da65dfd69dc99c12b1c7d0a81f8c9a35
+run_id: 20260910T123514-635506da
+config_fingerprint: 225534c9539a46a6966a3445b0286bef1a15269c799797cd58ec78b2f9de1144
+tool_version: "vcs script version : W-2024.09\nmachine name = localhost.localdomain\
+  \ \nmachine type = linux \nmachine os = Linux 4.18.0-553.137.1.el8_10.x86_64  \n\
+  The FLEXlm host ID of this machine is \"000c299df92d\"\nCompiler version = VCS W-2024.09-SP1_Full64\n\
+  VCS Build Date = Dec 03 2024 20:20:03\nIf you need to renew your license, please\
+  \ email this information to your\nAccount Manager. To obtain contact information\
+  \ for your Account Manager\nplease email pass@synopsys.com\n"
+status: FAIL

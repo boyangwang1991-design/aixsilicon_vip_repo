@@ -1,0 +1,35 @@
+timestamp: '2026-09-10T12:09:46Z'
+seed: 1
+tool: vcs
+cases:
+- tier: compile
+  seed: 1
+  wait: 0
+  command:
+  - vcs
+  - -full64
+  - -sverilog
+  - -ntb_opts
+  - uvm-1.2
+  - -timescale=1ns/1ps
+  - -f
+  - filelist.f
+  - -top
+  - ahb_smoke_tb
+  - -Mdir=/home/eda/workspace/aixsilicon_workflow/repos/aixsilicon_vip_repo/vip/amba/ahb/self_test/build/current/smoke/csrc
+  - -o
+  - /home/eda/workspace/aixsilicon_workflow/repos/aixsilicon_vip_repo/vip/amba/ahb/self_test/build/current/smoke/simv
+  compile_log: reports/logs/20260910T120946-98abf885/smoke_compile.log
+  compile_exit: 0
+  compile_seconds: 18.911944161052816
+  status: PASS
+source_fingerprint: 98abf8851e2f26d7e8fc78c882ef64b0d9865c9a151d3dad3a126be7de96a00c
+run_id: 20260910T120946-98abf885
+config_fingerprint: 6bfc2e09adbb2473cdff85df0bc248303feaf2bd42fe881d45cff0193cd4d59a
+tool_version: "vcs script version : W-2024.09\nmachine name = localhost.localdomain\
+  \ \nmachine type = linux \nmachine os = Linux 4.18.0-553.137.1.el8_10.x86_64  \n\
+  The FLEXlm host ID of this machine is \"000c299df92d\"\nCompiler version = VCS W-2024.09-SP1_Full64\n\
+  VCS Build Date = Dec 03 2024 20:20:03\nIf you need to renew your license, please\
+  \ email this information to your\nAccount Manager. To obtain contact information\
+  \ for your Account Manager\nplease email pass@synopsys.com\n"
+status: PASS

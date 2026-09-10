@@ -1,0 +1,5 @@
+generated_at: '2026-09-10T12:51:04.511574+00:00'
+source_fingerprint: dfd100e7b01591b9fbe7cc3a250a4682314d77fd63f36748d184c9a44dfc9682
+warnings: []
+status: PASS
+scope: VCS compile warning scan, not a dedicated SV lint proof

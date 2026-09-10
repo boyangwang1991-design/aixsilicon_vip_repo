@@ -1,0 +1,10 @@
+self_test/build/
+**/build/
+**/csrc/
+**/simv*
+**/ucli.key
+**/vc_hdrs.h
+**/DVEfiles/
+**/inter.vpd
+**/novas*
+**/__pycache__/

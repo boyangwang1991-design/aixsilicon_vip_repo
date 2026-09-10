@@ -1,0 +1,282 @@
+schema_version: 1
+rules:
+- id: AHB-CHECK-ALIGN
+  requirement: AHB-BST-004
+  issue: IHI0033C
+  clause: 3.2, 3.4, 3.6 and 3.7
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-BOUNDARY
+  requirement: AHB-BST-004
+  issue: IHI0033C
+  clause: 3.2, 3.4, 3.6 and 3.7
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-BURST-ATTR
+  requirement: AHB-BST-004
+  issue: IHI0033C
+  clause: 3.2, 3.4, 3.6 and 3.7
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-BUSY
+  requirement: AHB-BST-004
+  issue: IHI0033C
+  clause: 3.2, 3.4, 3.6 and 3.7
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-CAPABILITY
+  requirement: AHB-SCP-005
+  issue: IHI0033C
+  clause: DUT capability policy
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-CONTROL-X
+  requirement: AHB-BST-004
+  issue: IHI0033C
+  clause: 3.2, 3.4, 3.6 and 3.7
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-DATA-X
+  requirement: AHB-BST-004
+  issue: IHI0033C
+  clause: 3.2, 3.4, 3.6 and 3.7
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-ERROR-TWO
+  requirement: AHB-RSP-002
+  issue: IHI0033C
+  clause: '5.1'
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-EX-FORM
+  requirement: AHB-EXC-006
+  issue: IHI0033C
+  clause: "10.3\u201310.4"
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-EX-OVERLAP
+  requirement: AHB-EXC-006
+  issue: IHI0033C
+  clause: "10.3\u201310.4"
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-EXOKAY
+  requirement: AHB-EXC-006
+  issue: IHI0033C
+  clause: "10.3\u201310.4"
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-HOLD-ADDR
+  requirement: AHB-BAS-007
+  issue: IHI0033C
+  clause: 3.7; USER 11.2
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-HOLD-AUSER
+  requirement: AHB-BAS-007
+  issue: IHI0033C
+  clause: 3.7; USER 11.2
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-HOLD-STRB
+  requirement: AHB-BAS-007
+  issue: IHI0033C
+  clause: 3.7; USER 11.2
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-HOLD-WDATA
+  requirement: AHB-BAS-007
+  issue: IHI0033C
+  clause: 3.7; USER 11.2
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-HOLD-WUSER
+  requirement: AHB-BAS-007
+  issue: IHI0033C
+  clause: 3.7; USER 11.2
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-PAR-ADDR
+  requirement: AHB-PAR-001
+  issue: IHI0033C
+  clause: 12.5 Table 12-1
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-PAR-AUSER
+  requirement: AHB-PAR-001
+  issue: IHI0033C
+  clause: 12.5 Table 12-1
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-PAR-BUSER
+  requirement: AHB-PAR-001
+  issue: IHI0033C
+  clause: 12.5 Table 12-1
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-PAR-CTRL1
+  requirement: AHB-PAR-001
+  issue: IHI0033C
+  clause: 12.5 Table 12-1
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-PAR-CTRL2
+  requirement: AHB-PAR-001
+  issue: IHI0033C
+  clause: 12.5 Table 12-1
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-PAR-PROT
+  requirement: AHB-PAR-001
+  issue: IHI0033C
+  clause: 12.5 Table 12-1
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-PAR-RDATA
+  requirement: AHB-PAR-001
+  issue: IHI0033C
+  clause: 12.5 Table 12-1
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-PAR-READY
+  requirement: AHB-PAR-001
+  issue: IHI0033C
+  clause: 12.5 Table 12-1
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-PAR-READYOUT
+  requirement: AHB-PAR-001
+  issue: IHI0033C
+  clause: 12.5 Table 12-1
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-PAR-RESP
+  requirement: AHB-PAR-001
+  issue: IHI0033C
+  clause: 12.5 Table 12-1
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-PAR-RUSER
+  requirement: AHB-PAR-001
+  issue: IHI0033C
+  clause: 12.5 Table 12-1
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-PAR-SEL
+  requirement: AHB-PAR-001
+  issue: IHI0033C
+  clause: 12.5 Table 12-1
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-PAR-STRB
+  requirement: AHB-PAR-001
+  issue: IHI0033C
+  clause: 12.5 Table 12-1
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-PAR-TRANS
+  requirement: AHB-PAR-001
+  issue: IHI0033C
+  clause: 12.5 Table 12-1
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-PAR-WDATA
+  requirement: AHB-PAR-001
+  issue: IHI0033C
+  clause: 12.5 Table 12-1
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-PAR-WUSER
+  requirement: AHB-PAR-001
+  issue: IHI0033C
+  clause: 12.5 Table 12-1
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-RESP-CODE
+  requirement: AHB-RSP-002
+  issue: IHI0033C
+  clause: '5.1'
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-RESP-PHASE
+  requirement: AHB-RSP-002
+  issue: IHI0033C
+  clause: '5.1'
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-RESP-X
+  requirement: AHB-RSP-002
+  issue: IHI0033C
+  clause: '5.1'
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-SEQ
+  requirement: AHB-BST-004
+  issue: IHI0033C
+  clause: 3.2, 3.4, 3.6 and 3.7
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-SEQ-ADDR
+  requirement: AHB-BST-004
+  issue: IHI0033C
+  clause: 3.2, 3.4, 3.6 and 3.7
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-SIZE
+  requirement: AHB-BST-004
+  issue: IHI0033C
+  clause: 3.2, 3.4, 3.6 and 3.7
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-WATCHDOG
+  requirement: AHB-BAS-010
+  issue: IHI0033C
+  clause: environment policy, not protocol rule
+  severity: UVM_ERROR
+  enable: cfg.enable_checker and profile/presence condition in source
+  source: src/checker/ahb_checker.sv
+- id: AHB-CHECK-ADDR-X
+  requirement: AHB-BST-010
+  issue: IHI0033C
+  clause: 3.2 address phase validity
+  severity: UVM_ERROR
+  enable: valid selected address phase
+  source: src/checker/ahb_checker.sv
