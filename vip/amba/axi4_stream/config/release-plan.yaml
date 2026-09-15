@@ -1,0 +1,173 @@
+schema_version: vip.release-plan/v1
+vlnv: aixsilicon:vip:axi4_stream:1.0.0
+state: frozen
+release_scope:
+  supported:
+  - AMBA AXI4-Stream（IHI 0051A 基线）单向接口
+  - FULL_UVM 与 PASSIVE 角色；CHECKER_ONLY 独立构建路径
+  - UVM 1.2 + VCS W-2024.09-SP1（四态与 SVA）
+  - 全部 15 条协议规则与 9 种背压策略
+  - CDC 数据完整性与复位合同（不宣称亚稳态安全）
+  experimental: []
+  unsupported:
+  - AXI memory-mapped（AW/W/B/AR/R）与 RAL
+  - AXI5-Stream / TWAKEUP / 接口奇偶校验扩展
+  - Pass-through BFM
+  - 第二商业仿真器（未执行兼容矩阵）
+  - CDC 亚稳态安全证明（仅验证合同与数据完整性）
+  - 公共 HWIF 兼容声明（本仓无该契约，interface 为 development binding）
+acceptance_items:
+- id: l1_semantic_golden
+  criterion:
+  - L1 语义 golden vector 全部通过
+  test:
+  - unit
+  coverage_points:
+  - config/verification-plan.yaml 中对应 case/bin 的命中记录
+  evidence_required:
+  - config/verification-plan.yaml 的 unit case 全部 PASS
+  - 日志含 UNIT_TEST_PASS 且无 FAILED 行
+- id: protocol_rules
+  criterion:
+  - 15 条协议规则可检出且不误报
+  test:
+  - corner
+  coverage_points:
+  - config/verification-plan.yaml 中对应 case/bin 的命中记录
+  evidence_required:
+  - 合法流无非预期 ERROR
+  - 逐规则注入命中预期告警（REQ-ERR-002）
+- id: end_to_end_compare
+  criterion:
+  - monitor 事实端到端比较一致
+  test:
+  - feature
+  coverage_points:
+  - config/verification-plan.yaml 中对应 case/bin 的命中记录
+  evidence_required:
+  - EXACT_BEAT 模式下 mismatched=0 且 unexpected=0
+- id: backpressure_matrix
+  criterion:
+  - 9 种背压模式可用
+  test:
+  - config
+  coverage_points:
+  - config/verification-plan.yaml 中对应 case/bin 的命中记录
+  evidence_required:
+  - 逐个 ready 策略装载后 matched>0 且无 ERROR
+- id: reset_contract
+  criterion:
+  - 复位中止/epoch/无虚构响应
+  test:
+  - reset
+  coverage_points:
+  - config/verification-plan.yaml 中对应 case/bin 的命中记录
+  evidence_required:
+  - monitor epoch 递增、观测到 ABORTED_BY_RESET
+  - 复位后仍可正常传输
+- id: cdc_integrity
+  criterion:
+  - 异步跨时钟域数据完整与复位合同
+  test:
+  - cdc
+  coverage_points:
+  - config/verification-plan.yaml 中对应 case/bin 的命中记录
+  evidence_required:
+  - 双时钟双复位下目标侧 matched>0
+  - BOTH_FLUSH/PRESERVE/CUSTOM 合同可配置
+- id: error_injection
+  criterion:
+  - 逐项错误注入与期望匹配
+  test:
+  - inject
+  coverage_points:
+  - config/verification-plan.yaml 中对应 case/bin 的命中记录
+  evidence_required:
+  - 每条注入规则命中数增加
+  - 无未解释的额外告警
+- id: passive_observe
+  criterion:
+  - PASSIVE 只观测不驱动
+  test:
+  - passive
+  coverage_points:
+  - config/verification-plan.yaml 中对应 case/bin 的命中记录
+  evidence_required:
+  - sink 侧 monitor 观测到握手
+  - 未写入任何总线信号
+- id: perf_statistics
+  criterion:
+  - 统计口径与内存有界
+  test:
+  - perf
+  coverage_points:
+  - config/verification-plan.yaml 中对应 case/bin 的命中记录
+  evidence_required:
+  - position 不计入吞吐
+  - STREAMING+history_limit 下 open_stream 不越界
+- id: cancel_watchdog
+  criterion:
+  - 取消/watchdog 不破坏协议
+  test:
+  - cancel
+  coverage_points:
+  - config/verification-plan.yaml 中对应 case/bin 的命中记录
+  evidence_required:
+  - 在途拍不被取消
+  - watchdog 报告后 drain 正常完成
+- id: sched_replay
+  criterion:
+  - 文件回放可复现与多流调度
+  test:
+  - sched
+  coverage_points:
+  - config/verification-plan.yaml 中对应 case/bin 的命中记录
+  evidence_required:
+  - 同一文件两次回放拍数一致
+  - RR/weighted/显式顺序与 BUFFER_MODEL 均可运行
+- id: checker_only
+  criterion:
+  - CHECKER_ONLY 独立构建
+  test:
+  - checker_only
+  coverage_points:
+  - config/verification-plan.yaml 中对应 case/bin 的命中记录
+  evidence_required:
+  - 不 import uvm_pkg、无 driver 线程
+  - AXIS_CHECKER_ONLY_PASS
+- id: structural_evidence
+  criterion:
+  - 结构性证据（REQ-CHK-004）
+  test:
+  - structural
+  coverage_points:
+  - config/verification-plan.yaml 中对应 case/bin 的命中记录
+  evidence_required:
+  - S1-S5 全部通过
+- id: mutation_detection
+  criterion:
+  - 语义变异可检出率
+  test:
+  - mutation
+  coverage_points:
+  - config/verification-plan.yaml 中对应 case/bin 的命中记录
+  evidence_required:
+  - '>=95% 且 P0 全命中（12/12）'
+- id: seed_reproducibility
+  criterion:
+  - 固定 seed 可复现
+  test:
+  - seed_matrix
+  coverage_points:
+  - config/verification-plan.yaml 中对应 case/bin 的命中记录
+  evidence_required:
+  - 3 tier × 20 seed 全部通过
+- id: coverage_closure
+  criterion:
+  - 版本必测覆盖 bin 全部命中
+  test:
+  - coverage
+  coverage_points:
+  - config/verification-plan.yaml 中对应 case/bin 的命中记录
+  evidence_required:
+  - 四项指标 bin 集合与计划一致且命中率达标

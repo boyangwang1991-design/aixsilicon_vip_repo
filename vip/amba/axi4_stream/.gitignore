@@ -1,0 +1,14 @@
+# 运行产物一律落在 build/ 下，不提交
+/build/
+/mutant/
+
+# 常见 EDA 旁文件（如误落在源码根，仍不提交）
+*.log
+*.vpd
+*.fsdb
+*.vcd
+ucli.key
+tr_db.log
+csrc/
+simv*
+*.daidir

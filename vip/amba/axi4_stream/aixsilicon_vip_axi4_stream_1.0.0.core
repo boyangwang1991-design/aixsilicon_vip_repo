@@ -1,0 +1,150 @@
+CAPI=2:
+name: aixsilicon:vip:axi4_stream:1.0.0
+filesets:
+  checker_only:
+    file_type: systemVerilogSource
+    files:
+    - src/axi4_stream_types_pkg.sv
+    - src/axi4_stream_if.sv
+    - src/checker/axi4_stream_assertions.sv
+    - self_test/tb/axi4_stream_checker_only_tb.sv
+  examples:
+    file_type: systemVerilogSource
+    files:
+    - examples/axi4_stream_example_top.sv
+    - examples/smoke/axi4_stream_smoke_env.sv:
+        include_path: examples/smoke
+        is_include_file: true
+  rtl:
+    file_type: systemVerilogSource
+    files:
+    - src/axi4_stream_types_pkg.sv
+    - src/axi4_stream_if.sv
+    - src/axi4_stream_pkg.sv
+    - src/transaction/axi4_stream_item.sv:
+        include_path: src
+        is_include_file: true
+    - src/axi4_stream_config.sv:
+        include_path: src
+        is_include_file: true
+    - src/model/axi4_stream_stream_model.sv:
+        include_path: src
+        is_include_file: true
+    - src/sequences/axi4_stream_base_seq.sv:
+        include_path: src
+        is_include_file: true
+    - src/sequences/axi4_stream_smoke_seq.sv:
+        include_path: src
+        is_include_file: true
+    - src/checker/axi4_stream_checker.sv:
+        include_path: src
+        is_include_file: true
+    - src/coverage/axi4_stream_coverage.sv:
+        include_path: src
+        is_include_file: true
+    - src/scoreboard/axi4_stream_reference_model.sv:
+        include_path: src
+        is_include_file: true
+    - src/scoreboard/axi4_stream_scoreboard.sv:
+        include_path: src
+        is_include_file: true
+    - src/agent/axi4_stream_monitor.sv:
+        include_path: src
+        is_include_file: true
+    - src/agent/axi4_stream_driver.sv:
+        include_path: src
+        is_include_file: true
+    - src/agent/axi4_stream_sink_driver.sv:
+        include_path: src
+        is_include_file: true
+    - src/agent/axi4_stream_sequencer.sv:
+        include_path: src
+        is_include_file: true
+    - src/agent/axi4_stream_agent.sv:
+        include_path: src
+        is_include_file: true
+    - src/env/axi4_stream_violation_injector.sv:
+        include_path: src
+        is_include_file: true
+    - src/env/axi4_stream_env.sv:
+        include_path: src
+        is_include_file: true
+  selftest:
+    file_type: systemVerilogSource
+    files:
+    - self_test/tb/axi4_stream_dut_fixtures.sv
+    - self_test/tb/axi4_stream_smoke_test.sv
+    - self_test/tb/axi4_stream_smoke_tb.sv
+    - self_test/tb/axi4_stream_smoke_env.sv:
+        include_path: self_test/tb
+        is_include_file: true
+    - self_test/tb/axi4_stream_tests.sv:
+        include_path: self_test/tb
+        is_include_file: true
+  unit_test:
+    file_type: systemVerilogSource
+    files:
+    - unit_test/unit_test_runner.sv
+    - unit_test/axi4_stream_unit_semantic.sv
+    - unit_test/axi4_stream_unit_transaction.sv
+    - unit_test/axi4_stream_unit_config.sv
+    - unit_test/axi4_stream_unit_checker.sv
+    - unit_test/axi4_stream_unit_tb.sv
+targets:
+  checker_only:
+    default_tool: vcs
+    filesets:
+    - checker_only
+    tools:
+      vcs:
+        run_options:
+        - -no_save
+        vcs_options:
+        - -full64
+        - -sverilog
+        - -timescale=1ns/1ps
+    toplevel: axi4_stream_checker_only_tb
+  default:
+    filesets:
+    - rtl
+  example:
+    default_tool: vcs
+    filesets:
+    - rtl
+    - selftest
+    - examples
+    tools: &id001
+      vcs:
+        run_options:
+        - -no_save
+        vcs_options:
+        - -full64
+        - -sverilog
+        - -timescale=1ns/1ps
+        - -ntb_opts
+        - uvm-1.2
+    toplevel: axi4_stream_example_top
+  lint:
+    filesets:
+    - rtl
+  regression:
+    default_tool: vcs
+    filesets:
+    - rtl
+    - selftest
+    tools: *id001
+    toplevel: axi4_stream_smoke_tb
+  smoke:
+    default_tool: vcs
+    filesets:
+    - rtl
+    - selftest
+    tools: *id001
+    toplevel: axi4_stream_smoke_tb
+  unit_sim:
+    default_tool: vcs
+    filesets:
+    - rtl
+    - unit_test
+    tools: *id001
+    toplevel: axi4_stream_unit_tb

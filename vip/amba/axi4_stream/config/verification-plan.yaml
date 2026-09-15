@@ -1,0 +1,407 @@
+schema_version: vip.plan/v1
+asset:
+  vlnv: aixsilicon:vip:axi4_stream:1.0.0
+  profile: FULL_UVM
+stages:
+  requirement:
+  - id: requirements-reviewed
+    required: true
+  architecture:
+  - id: architecture-reviewed
+    required: true
+  regression:
+  - id: compile
+    required: true
+  - id: unit
+    required: true
+  - id: smoke
+    required: true
+  - id: feature
+    required: true
+  - id: corner
+    required: true
+  - id: random
+    required: true
+  - id: stress
+    required: true
+  - id: config
+    required: true
+  - id: passive
+    required: true
+  - id: checker_only
+    required: true
+  - id: reset
+    required: true
+  - id: perf
+    required: true
+  - id: cancel
+    required: true
+  - id: sched
+    required: true
+  - id: cdc
+    required: true
+  - id: inject
+    required: true
+  - id: structural
+    required: true
+  - id: seed_matrix
+    required: true
+  mutation:
+  - id: MUT-BYTE-CLASS
+    required: true
+    priority: P0
+  - id: MUT-NULL-REMOVE
+    required: true
+    priority: P0
+  - id: MUT-END-PACKET
+    required: true
+    priority: P0
+  - id: MUT-KEEP-DEFAULT
+    required: true
+    priority: P0
+  - id: MUT-ILLEGAL-COMB
+    required: true
+    priority: P0
+  - id: MUT-CFG-NODATA
+    required: true
+    priority: P0
+  - id: MUT-BEAT-COUNT
+    required: true
+    priority: P0
+  - id: MUT-KEEP-BEAT
+    required: true
+    priority: P0
+  - id: MUT-EXPRESSIBLE
+    required: true
+    priority: P0
+  - id: MUT-EXACT-COMPARE
+    required: true
+    priority: P0
+  - id: MUT-TOKEN-EQ
+    required: true
+    priority: P0
+  - id: MUT-PAYLOAD-X
+    required: true
+    priority: P0
+  rtm:
+  - id: REQ-ACC-001
+    required: true
+  - id: REQ-ACC-002
+    required: true
+  - id: REQ-ACC-003
+    required: true
+  - id: REQ-ACC-004
+    required: true
+  - id: REQ-ACC-005
+    required: true
+  - id: REQ-ACC-006
+    required: true
+  - id: REQ-ACC-007
+    required: true
+  - id: REQ-CFG-001
+    required: true
+  - id: REQ-CFG-002
+    required: true
+  - id: REQ-CFG-003
+    required: true
+  - id: REQ-CFG-004
+    required: true
+  - id: REQ-CFG-005
+    required: true
+  - id: REQ-CFG-006
+    required: true
+  - id: REQ-CFG-007
+    required: true
+  - id: REQ-CHK-001
+    required: true
+  - id: REQ-CHK-002
+    required: true
+  - id: REQ-CHK-003
+    required: true
+  - id: REQ-CHK-004
+    required: true
+  - id: REQ-CHK-005
+    required: true
+  - id: REQ-COV-001
+    required: true
+  - id: REQ-COV-002
+    required: true
+  - id: REQ-COV-003
+    required: true
+  - id: REQ-ERR-001
+    required: true
+  - id: REQ-ERR-002
+    required: true
+  - id: REQ-ERR-003
+    required: true
+  - id: REQ-INT-001
+    required: true
+  - id: REQ-INT-002
+    required: true
+  - id: REQ-INT-003
+    required: true
+  - id: REQ-INT-004
+    required: true
+  - id: REQ-INT-005
+    required: true
+  - id: REQ-MON-001
+    required: true
+  - id: REQ-MON-002
+    required: true
+  - id: REQ-MON-003
+    required: true
+  - id: REQ-MON-004
+    required: true
+  - id: REQ-MON-005
+    required: true
+  - id: REQ-MON-006
+    required: true
+  - id: REQ-MON-007
+    required: true
+  - id: REQ-PERF-001
+    required: true
+  - id: REQ-PERF-002
+    required: true
+  - id: REQ-PERF-003
+    required: true
+  - id: REQ-PERF-004
+    required: true
+  - id: REQ-PRO-001
+    required: true
+  - id: REQ-PRO-002
+    required: true
+  - id: REQ-PRO-003
+    required: true
+  - id: REQ-PRO-004
+    required: true
+  - id: REQ-PRO-005
+    required: true
+  - id: REQ-PRO-006
+    required: true
+  - id: REQ-PRO-007
+    required: true
+  - id: REQ-PRO-008
+    required: true
+  - id: REQ-PRO-009
+    required: true
+  - id: REQ-PRO-010
+    required: true
+  - id: REQ-RST-001
+    required: true
+  - id: REQ-RST-002
+    required: true
+  - id: REQ-RST-003
+    required: true
+  - id: REQ-RST-004
+    required: true
+  - id: REQ-RST-005
+    required: true
+  - id: REQ-RST-006
+    required: true
+  - id: REQ-RST-007
+    required: true
+  - id: REQ-SCB-001
+    required: true
+  - id: REQ-SCB-002
+    required: true
+  - id: REQ-SCB-003
+    required: true
+  - id: REQ-SCB-004
+    required: true
+  - id: REQ-SCB-005
+    required: true
+  - id: REQ-SCB-006
+    required: true
+  - id: REQ-SCB-007
+    required: true
+  - id: REQ-SCB-008
+    required: true
+  - id: REQ-SCP-001
+    required: true
+  - id: REQ-SCP-002
+    required: true
+  - id: REQ-SCP-003
+    required: true
+  - id: REQ-SCP-004
+    required: true
+  - id: REQ-SCP-005
+    required: true
+  - id: REQ-SEQ-001
+    required: true
+  - id: REQ-SNK-001
+    required: true
+  - id: REQ-SNK-002
+    required: true
+  - id: REQ-SNK-003
+    required: true
+  - id: REQ-SNK-004
+    required: true
+  - id: REQ-SRC-001
+    required: true
+  - id: REQ-SRC-002
+    required: true
+  - id: REQ-SRC-003
+    required: true
+  - id: REQ-SRC-004
+    required: true
+  - id: REQ-SRC-005
+    required: true
+  - id: REQ-TXN-001
+    required: true
+  - id: REQ-TXN-002
+    required: true
+  - id: REQ-TXN-003
+    required: true
+  - id: REQ-TXN-004
+    required: true
+  - id: REQ-TXN-005
+    required: true
+  - id: REQ-TXN-006
+    required: true
+  - id: REQ-TXN-007
+    required: true
+  - id: REQ-VAL-001
+    required: true
+  - id: REQ-VAL-002
+    required: true
+coverage_bins:
+  requirement_coverage:
+  - REQ-ACC-001
+  - REQ-ACC-002
+  - REQ-ACC-003
+  - REQ-ACC-004
+  - REQ-ACC-005
+  - REQ-ACC-006
+  - REQ-ACC-007
+  - REQ-CFG-001
+  - REQ-CFG-002
+  - REQ-CFG-003
+  - REQ-CFG-004
+  - REQ-CFG-005
+  - REQ-CFG-006
+  - REQ-CFG-007
+  - REQ-CHK-001
+  - REQ-CHK-002
+  - REQ-CHK-003
+  - REQ-CHK-004
+  - REQ-CHK-005
+  - REQ-COV-001
+  - REQ-COV-002
+  - REQ-COV-003
+  - REQ-ERR-001
+  - REQ-ERR-002
+  - REQ-ERR-003
+  - REQ-INT-001
+  - REQ-INT-002
+  - REQ-INT-003
+  - REQ-INT-004
+  - REQ-INT-005
+  - REQ-MON-001
+  - REQ-MON-002
+  - REQ-MON-003
+  - REQ-MON-004
+  - REQ-MON-005
+  - REQ-MON-006
+  - REQ-MON-007
+  - REQ-PERF-001
+  - REQ-PERF-002
+  - REQ-PERF-003
+  - REQ-PERF-004
+  - REQ-PRO-001
+  - REQ-PRO-002
+  - REQ-PRO-003
+  - REQ-PRO-004
+  - REQ-PRO-005
+  - REQ-PRO-006
+  - REQ-PRO-007
+  - REQ-PRO-008
+  - REQ-PRO-009
+  - REQ-PRO-010
+  - REQ-RST-001
+  - REQ-RST-002
+  - REQ-RST-003
+  - REQ-RST-004
+  - REQ-RST-005
+  - REQ-RST-006
+  - REQ-RST-007
+  - REQ-SCB-001
+  - REQ-SCB-002
+  - REQ-SCB-003
+  - REQ-SCB-004
+  - REQ-SCB-005
+  - REQ-SCB-006
+  - REQ-SCB-007
+  - REQ-SCB-008
+  - REQ-SCP-001
+  - REQ-SCP-002
+  - REQ-SCP-003
+  - REQ-SCP-004
+  - REQ-SCP-005
+  - REQ-SEQ-001
+  - REQ-SNK-001
+  - REQ-SNK-002
+  - REQ-SNK-003
+  - REQ-SNK-004
+  - REQ-SRC-001
+  - REQ-SRC-002
+  - REQ-SRC-003
+  - REQ-SRC-004
+  - REQ-SRC-005
+  - REQ-TXN-001
+  - REQ-TXN-002
+  - REQ-TXN-003
+  - REQ-TXN-004
+  - REQ-TXN-005
+  - REQ-TXN-006
+  - REQ-TXN-007
+  - REQ-VAL-001
+  - REQ-VAL-002
+  feature_coverage:
+  - hs.cp_order
+  - hs.cp_stall
+  - hs.cp_backtoback
+  - pkt.cp_beat_index
+  - pkt.cp_data_bytes
+  - pkt.cp_last
+  - pkt.cp_tlast_stall
+  - pkt.cp_abort
+  - pkt.cp_cont
+  - qual.cp_kind
+  - qual.cp_keep
+  - qual.cp_illegal
+  - strm.cp_keys
+  - strm.cp_interleave
+  - strm.cp_switch
+  - strm.cp_same_key_multi
+  - side.cp_id
+  - side.cp_dest
+  - side.cp_user
+  - rst.cp_reset_phase
+  - rst.cp_after_release
+  - cfg.cp_data_width
+  - cfg.cp_ports
+  - cfg.cp_build
+  - err.cp_rule
+  - trf.cp_ratio
+  - trf.cp_partial
+  - trf.cp_position
+  - trf.cp_null
+  - trf.cp_user
+  - trf.cp_tlast
+  - trf.cross_ratio_partial_last
+  cross_coverage:
+  - x.last_x_stall
+  - x.qual_x_pos
+  - x.reset_x_hs
+  - x.keys_x_bp
+  - x.ratio_x_partial_x_last
+  assertion_coverage:
+  - sva.p001
+  - sva.p002
+  - sva.p003
+  - sva.p004_data
+  - sva.p004_keep
+  - sva.p005
+  - sva.p006
+  - sva.p006_ready
+  - sva.p007

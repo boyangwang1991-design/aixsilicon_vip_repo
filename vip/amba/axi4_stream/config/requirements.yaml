@@ -1,0 +1,100 @@
+schema_version: vip.requirements/v1
+# 权威 REQ ID 清单：与 docs/requirement.md 表格 ID 及 ../axi_stream_vip_contract.md 完全一致。
+# 优先级在 config/verification-plan.yaml 冻结；本文件不做结果声明。
+requirements:
+  # ---- Protocol Capability（SCP / CFG / PRO）----
+  - {id: REQ-SCP-001, family: SCP, priority: P0, methods: [T, N, C]}
+  - {id: REQ-SCP-002, family: SCP, priority: P0, methods: [T, C]}
+  - {id: REQ-SCP-003, family: SCP, priority: P0, methods: [T, C]}
+  - {id: REQ-SCP-004, family: SCP, priority: P0, methods: [T, I]}
+  - {id: REQ-SCP-005, family: SCP, priority: P0, methods: [T, I]}
+  - {id: REQ-CFG-001, family: CFG, priority: P0, methods: [T, I]}
+  - {id: REQ-CFG-002, family: CFG, priority: P0, methods: [T, C]}
+  - {id: REQ-CFG-003, family: CFG, priority: P0, methods: [T, I]}
+  - {id: REQ-CFG-004, family: CFG, priority: P0, methods: [T, I]}
+  - {id: REQ-CFG-005, family: CFG, priority: P0, methods: [T, I]}
+  - {id: REQ-CFG-006, family: CFG, priority: P0, methods: [N, I]}
+  - {id: REQ-CFG-007, family: CFG, priority: P0, methods: [T, I]}
+  - {id: REQ-PRO-001, family: PRO, priority: P0, methods: [A, T]}
+  - {id: REQ-PRO-002, family: PRO, priority: P0, methods: [T]}
+  - {id: REQ-PRO-003, family: PRO, priority: P0, methods: [A, N]}
+  - {id: REQ-PRO-004, family: PRO, priority: P0, methods: [T]}
+  - {id: REQ-PRO-005, family: PRO, priority: P0, methods: [T, A]}
+  - {id: REQ-PRO-006, family: PRO, priority: P0, methods: [T, C]}
+  - {id: REQ-PRO-007, family: PRO, priority: P0, methods: [T, A]}
+  - {id: REQ-PRO-008, family: PRO, priority: P0, methods: [T, P]}
+  - {id: REQ-PRO-009, family: PRO, priority: P0, methods: [T, A]}
+  - {id: REQ-PRO-010, family: PRO, priority: P0, methods: [T, A]}
+  # ---- Protocol Rules（CHK）----
+  - {id: REQ-CHK-001, family: CHK, priority: P0, methods: [A, N]}
+  - {id: REQ-CHK-002, family: CHK, priority: P0, methods: [A, N]}
+  - {id: REQ-CHK-003, family: CHK, priority: P0, methods: [T, I]}
+  - {id: REQ-CHK-004, family: CHK, priority: P0, methods: [I]}
+  - {id: REQ-CHK-005, family: CHK, priority: P0, methods: [A, I]}
+  # ---- Transaction / API（TXN / INT）----
+  - {id: REQ-TXN-001, family: TXN, priority: P0, methods: [T, I]}
+  - {id: REQ-TXN-002, family: TXN, priority: P0, methods: [T]}
+  - {id: REQ-TXN-003, family: TXN, priority: P0, methods: [T]}
+  - {id: REQ-TXN-004, family: TXN, priority: P0, methods: [T, I]}
+  - {id: REQ-TXN-005, family: TXN, priority: P0, methods: [T, N]}
+  - {id: REQ-TXN-006, family: TXN, priority: P0, methods: [T, I]}
+  - {id: REQ-TXN-007, family: TXN, priority: P0, methods: [T]}
+  - {id: REQ-INT-001, family: INT, priority: P0, methods: [I]}
+  - {id: REQ-INT-002, family: INT, priority: P0, methods: [I]}
+  - {id: REQ-INT-003, family: INT, priority: P0, methods: [T]}
+  - {id: REQ-INT-004, family: INT, priority: P0, methods: [I]}
+  - {id: REQ-INT-005, family: INT, priority: P0, methods: [I]}
+  # ---- Source / Sink / Monitor / Reset / Errors ---- 
+  - {id: REQ-SRC-001, family: SRC, priority: P0, methods: [T]}
+  - {id: REQ-SRC-002, family: SRC, priority: P0, methods: [T]}
+  - {id: REQ-SRC-003, family: SRC, priority: P0, methods: [T, P]}
+  - {id: REQ-SRC-004, family: SRC, priority: P0, methods: [T]}
+  - {id: REQ-SRC-005, family: SRC, priority: P0, methods: [T, I]}
+  - {id: REQ-SNK-001, family: SNK, priority: P0, methods: [T]}
+  - {id: REQ-SNK-002, family: SNK, priority: P0, methods: [T]}
+  - {id: REQ-SNK-003, family: SNK, priority: P0, methods: [T]}
+  - {id: REQ-SNK-004, family: SNK, priority: P0, methods: [T, I]}
+  - {id: REQ-MON-001, family: MON, priority: P0, methods: [T, I]}
+  - {id: REQ-MON-002, family: MON, priority: P0, methods: [T, I]}
+  - {id: REQ-MON-003, family: MON, priority: P0, methods: [T]}
+  - {id: REQ-MON-004, family: MON, priority: P0, methods: [T]}
+  - {id: REQ-MON-005, family: MON, priority: P0, methods: [T]}
+  - {id: REQ-MON-006, family: MON, priority: P0, methods: [T]}
+  - {id: REQ-MON-007, family: MON, priority: P0, methods: [T, N]}
+  - {id: REQ-RST-001, family: RST, priority: P0, methods: [T, I]}
+  - {id: REQ-RST-002, family: RST, priority: P0, methods: [T]}
+  - {id: REQ-RST-003, family: RST, priority: P0, methods: [I]}
+  - {id: REQ-RST-004, family: RST, priority: P0, methods: [T]}
+  - {id: REQ-RST-005, family: RST, priority: P0, methods: [I, T]}
+  - {id: REQ-RST-006, family: RST, priority: P0, methods: [T]}
+  - {id: REQ-RST-007, family: RST, priority: P0, methods: [I]}
+  - {id: REQ-ERR-001, family: ERR, priority: P0, methods: [N]}
+  - {id: REQ-ERR-002, family: ERR, priority: P0, methods: [N]}
+  - {id: REQ-ERR-003, family: ERR, priority: P0, methods: [I]}
+  # ---- Scoreboard / Reference（SCB）----
+  - {id: REQ-SCB-001, family: SCB, priority: P0, methods: [T, I]}
+  - {id: REQ-SCB-002, family: SCB, priority: P0, methods: [T]}
+  - {id: REQ-SCB-003, family: SCB, priority: P0, methods: [T, I]}
+  - {id: REQ-SCB-004, family: SCB, priority: P0, methods: [T]}
+  - {id: REQ-SCB-005, family: SCB, priority: P0, methods: [T, I]}
+  - {id: REQ-SCB-006, family: SCB, priority: P0, methods: [N, T]}
+  - {id: REQ-SCB-007, family: SCB, priority: P0, methods: [I]}
+  - {id: REQ-SCB-008, family: SCB, priority: P0, methods: [T]}
+  # ---- Sequences / Coverage / Perf / Validation / Acceptance ----
+  - {id: REQ-SEQ-001, family: SEQ, priority: P0, methods: [T, C]}
+  - {id: REQ-COV-001, family: COV, priority: P0, methods: [C]}
+  - {id: REQ-COV-002, family: COV, priority: P0, methods: [C]}
+  - {id: REQ-COV-003, family: COV, priority: P0, methods: [C, I]}
+  - {id: REQ-PERF-001, family: PERF, priority: P0, methods: [P, T]}
+  - {id: REQ-PERF-002, family: PERF, priority: P0, methods: [P]}
+  - {id: REQ-PERF-003, family: PERF, priority: P0, methods: [P]}
+  - {id: REQ-PERF-004, family: PERF, priority: P0, methods: [P, T]}
+  - {id: REQ-VAL-001, family: VAL, priority: P0, methods: [T, I]}
+  - {id: REQ-VAL-002, family: VAL, priority: P0, methods: [T, I]}
+  - {id: REQ-ACC-001, family: ACC, priority: P0, methods: [I]}
+  - {id: REQ-ACC-002, family: ACC, priority: P0, methods: [T, N]}
+  - {id: REQ-ACC-003, family: ACC, priority: P0, methods: [C]}
+  - {id: REQ-ACC-004, family: ACC, priority: P0, methods: [P, T]}
+  - {id: REQ-ACC-005, family: ACC, priority: P0, methods: [T]}
+  - {id: REQ-ACC-006, family: ACC, priority: P0, methods: [T, N]}
+  - {id: REQ-ACC-007, family: ACC, priority: P0, methods: [T, I]}
