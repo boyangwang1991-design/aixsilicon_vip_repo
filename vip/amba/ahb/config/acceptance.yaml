@@ -1,0 +1,43 @@
+schema_version: ahb.scope/v1
+version: 0.1.0
+validated_scope:
+- VCS / UVM 1.2；Lite32、AHB5_128、Classic32 现有定向能力
+- 18 项当前实现检查、WAIT=0/1/3/15/256、三个配置各 100 seed、百万完成 beat、6 个变异
+required_cases:
+  requirement:
+  - contract_identity
+  - configuration_scope
+  architecture:
+  - component_isolation
+  - development_binding
+  regression:
+  - compile
+  - unit
+  - vectors
+  - smoke
+  - negative
+  - extensions
+  - burst
+  - error
+  - reset
+  - ral
+  - classic
+  - system
+  - widths
+  - classic_agent
+  - wait_matrix
+  - seed_matrix
+  - mutation
+  - stress
+  mutation:
+  - MUT-ADDR
+  - MUT-PIPE
+  - MUT-ERROR
+  - MUT-MASK
+  - MUT-EXCL
+  - MUT-PARITY
+known_limitations:
+- 不是 169 条完整合同的 1.0.0 认证
+- 第二仿真器与 IEEE1800.2 未验证
+- 公共 HWIF 绑定、旧版规范逐条认证及全参数组合未完成
+decision: AI 审阅真实结果后直接填写 reports/qualification.md；公共脚本校验 METADATA。

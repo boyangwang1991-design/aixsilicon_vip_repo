@@ -2,6 +2,8 @@
 from pathlib import Path
 import hashlib,json,re
 import jsonschema,yaml
+from output import run_root
+RUN=run_root()
 root=Path(__file__).resolve().parents[1]
 profiles=yaml.safe_load((root/'config/profiles.yaml').read_text())
 jsonschema.validate(profiles,json.loads((root/'config/profile.schema.json').read_text()))
@@ -14,4 +16,4 @@ ids=re.findall(r'^\| (AHB-[A-Z]+-\d{3}) \|',(root/'docs/contract.md').read_text(
 actual=[r['id'] for r in yaml.safe_load((root/'config/requirements.yaml').read_text())['requirements']]
 assert len(ids)==len(set(ids))==169 and actual==ids
 result={'status':'PASS','profiles':{k:hashlib.sha256(json.dumps(v,sort_keys=True,separators=(',',':')).encode()).hexdigest() for k,v in profiles['profiles'].items()},'requirements':len(ids)}
-(root/'reports/config_check.yaml').write_text(yaml.safe_dump(result));print(result)
+(RUN/'evidence/config_check.yaml').write_text(yaml.safe_dump(result));print(result)

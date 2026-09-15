@@ -1,0 +1,76 @@
+schema_version: vip.release-plan/v1
+vlnv: aixsilicon:vip:ahb:0.1.0
+state: draft
+release_scope:
+  supported:
+  - 拟承诺Lite32：VCS/UVM1.2，读写、合法Burst与size0/1/2、等待/ERROR/复位
+  - 拟保留AHB5_128：现有SINGLE size2/4扩展定向能力
+  - 拟保留Classic32：现有SINGLE size2与RETRY/SPLIT重放定向能力
+  experimental: []
+  unsupported:
+  - 未承诺的完整1.0.0协议组合、公共HWIF认证、第二工具和IEEE1800.2
+acceptance_items:
+- id: BUILD-UNIT
+  criterion:
+  - 当前三配置构建及单元oracle通过
+  test:
+  - unit/full/FuseSoC
+  coverage_points:
+  - 配置编译与单元golden向量
+  evidence_required:
+  - 原始编译/仿真或静态检查证据、对应功能与必测覆盖记录
+- id: LITE-TRANSFER
+  criterion:
+  - Lite32读写、8种Burst与size0/1/2合法组合的数据和地址推进正确
+  test:
+  - burst/完整窄传输burst补测
+  coverage_points:
+  - lite32/rw×burst×size共48项
+  evidence_required:
+  - 原始编译/仿真或静态检查证据、对应功能与必测覆盖记录
+- id: LITE-RECOVERY
+  criterion:
+  - Lite32五档等待、ERROR取消和复位恢复正确
+  test:
+  - smoke WAIT=0/1/3/15/256、error、reset、vectors
+  coverage_points:
+  - 5档等待、错误恢复、复位中止及无幽灵事务
+  evidence_required:
+  - 原始编译/仿真或静态检查证据、对应功能与必测覆盖记录
+- id: AHB5-EXT
+  criterion:
+  - AHB5_128现有SINGLE、size2/4、strobe、USER、安全属性及exclusive定向行为正确
+  test:
+  - extensions与必要负向补测
+  coverage_points:
+  - 读写size2/4、零/稀疏strobe、exclusive成功/失败及约定parity点
+  evidence_required:
+  - 原始编译/仿真或静态检查证据、对应功能与必测覆盖记录
+- id: CLASSIC-REPLAY
+  criterion:
+  - Classic32 SINGLE size2读写、RETRY/SPLIT重放及仅成功提交一次
+  test:
+  - classic/classic_agent
+  coverage_points:
+  - RETRY、SPLIT、重放成功、写提交次数与读回
+  evidence_required:
+  - 原始编译/仿真或静态检查证据、对应功能与必测覆盖记录
+- id: CHECKER-NEG
+  criterion:
+  - 上述承诺对应关键错误能检出，合法流量无误报
+  test:
+  - negative、6个源码变异、对应合法向量
+  coverage_points:
+  - 计划选择的关键规则正负向与6个故障检出
+  evidence_required:
+  - 原始编译/仿真或静态检查证据、对应功能与必测覆盖记录
+- id: INTEGRATION
+  criterion:
+  - 示例、源码依赖和候选清单可独立解析
+  test:
+  - FuseSoC smoke/regression与release
+  coverage_points:
+  - 配置接入、编译运行、core与包哈希完整性
+  evidence_required:
+  - 原始编译/仿真或静态检查证据、对应功能与必测覆盖记录
+scope_note: 三配置承诺是可评审草案，不擅自将AHB5/Classic降为实验性；AHB-Lite-only方案未获明确范围确认。

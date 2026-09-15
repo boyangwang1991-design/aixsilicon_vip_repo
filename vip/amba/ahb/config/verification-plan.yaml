@@ -1,0 +1,881 @@
+schema_version: vip.plan/v1
+asset:
+  vlnv: aixsilicon:vip:ahb:0.1.0
+  profile: FULL_UVM
+stages:
+  requirement:
+  - id: contract_identity
+    required: true
+  - id: configuration_scope
+    required: true
+  - id: protocol_source_review
+    required: true
+  architecture:
+  - id: component_isolation
+    required: true
+  - id: interface_binding
+    required: true
+  - id: full_profile_review
+    required: true
+  - id: development_binding
+    required: true
+  regression:
+  - id: compile
+    required: true
+  - id: unit
+    required: true
+  - id: vectors
+    required: true
+  - id: smoke
+    required: true
+  - id: negative
+    required: true
+  - id: extensions
+    required: true
+  - id: burst
+    required: true
+  - id: error
+    required: true
+  - id: reset
+    required: true
+  - id: ral
+    required: true
+  - id: classic
+    required: true
+  - id: system
+    required: true
+  - id: widths
+    required: true
+  - id: classic_agent
+    required: true
+  - id: wait_matrix
+    required: true
+  - id: seed_matrix
+    required: true
+  - id: mutation
+    required: true
+  - id: stress
+    required: true
+  - id: portability
+    required: true
+  - id: uvm1800_2
+    required: true
+  - id: full_profile_matrix
+    required: true
+  mutation:
+  - id: MUT-ADDR
+    required: true
+    priority: P0
+  - id: MUT-PIPE
+    required: true
+    priority: P0
+  - id: MUT-ERROR
+    required: true
+    priority: P0
+  - id: MUT-MASK
+    required: true
+    priority: P0
+  - id: MUT-EXCL
+    required: true
+    priority: P0
+  - id: MUT-PARITY
+    required: true
+    priority: P0
+  rtm:
+  - id: AHB-SCP-001
+    required: true
+  - id: AHB-SCP-002
+    required: true
+  - id: AHB-SCP-003
+    required: true
+  - id: AHB-SCP-004
+    required: true
+  - id: AHB-SCP-005
+    required: true
+  - id: AHB-SCP-006
+    required: true
+  - id: AHB-SCP-007
+    required: true
+  - id: AHB-CFG-001
+    required: true
+  - id: AHB-CFG-002
+    required: true
+  - id: AHB-CFG-003
+    required: true
+  - id: AHB-CFG-004
+    required: true
+  - id: AHB-CFG-005
+    required: true
+  - id: AHB-CFG-006
+    required: true
+  - id: AHB-CFG-007
+    required: true
+  - id: AHB-CFG-008
+    required: true
+  - id: AHB-CFG-009
+    required: true
+  - id: AHB-CFG-010
+    required: true
+  - id: AHB-TRN-001
+    required: true
+  - id: AHB-TRN-002
+    required: true
+  - id: AHB-TRN-003
+    required: true
+  - id: AHB-TRN-004
+    required: true
+  - id: AHB-TRN-005
+    required: true
+  - id: AHB-TRN-006
+    required: true
+  - id: AHB-TRN-007
+    required: true
+  - id: AHB-TRN-008
+    required: true
+  - id: AHB-TRN-009
+    required: true
+  - id: AHB-TRN-010
+    required: true
+  - id: AHB-BAS-001
+    required: true
+  - id: AHB-BAS-002
+    required: true
+  - id: AHB-BAS-003
+    required: true
+  - id: AHB-BAS-004
+    required: true
+  - id: AHB-BAS-005
+    required: true
+  - id: AHB-BAS-006
+    required: true
+  - id: AHB-BAS-007
+    required: true
+  - id: AHB-BAS-008
+    required: true
+  - id: AHB-BAS-009
+    required: true
+  - id: AHB-BAS-010
+    required: true
+  - id: AHB-BST-001
+    required: true
+  - id: AHB-BST-002
+    required: true
+  - id: AHB-BST-003
+    required: true
+  - id: AHB-BST-004
+    required: true
+  - id: AHB-BST-005
+    required: true
+  - id: AHB-BST-006
+    required: true
+  - id: AHB-BST-007
+    required: true
+  - id: AHB-BST-008
+    required: true
+  - id: AHB-BST-009
+    required: true
+  - id: AHB-BST-010
+    required: true
+  - id: AHB-BST-011
+    required: true
+  - id: AHB-RSP-001
+    required: true
+  - id: AHB-RSP-002
+    required: true
+  - id: AHB-RSP-003
+    required: true
+  - id: AHB-RSP-004
+    required: true
+  - id: AHB-RSP-005
+    required: true
+  - id: AHB-RSP-006
+    required: true
+  - id: AHB-RSP-007
+    required: true
+  - id: AHB-RSP-008
+    required: true
+  - id: AHB-LCK-001
+    required: true
+  - id: AHB-LCK-002
+    required: true
+  - id: AHB-LCK-003
+    required: true
+  - id: AHB-LEG-001
+    required: true
+  - id: AHB-LEG-002
+    required: true
+  - id: AHB-LEG-003
+    required: true
+  - id: AHB-LEG-004
+    required: true
+  - id: AHB-LEG-005
+    required: true
+  - id: AHB-LEG-006
+    required: true
+  - id: AHB-LEG-007
+    required: true
+  - id: AHB-LEG-008
+    required: true
+  - id: AHB-LEG-009
+    required: true
+  - id: AHB-LEG-010
+    required: true
+  - id: AHB-SEC-001
+    required: true
+  - id: AHB-SEC-002
+    required: true
+  - id: AHB-SEC-003
+    required: true
+  - id: AHB-SEC-004
+    required: true
+  - id: AHB-SEC-005
+    required: true
+  - id: AHB-SEC-006
+    required: true
+  - id: AHB-ATM-001
+    required: true
+  - id: AHB-ATM-002
+    required: true
+  - id: AHB-EXC-001
+    required: true
+  - id: AHB-EXC-002
+    required: true
+  - id: AHB-EXC-003
+    required: true
+  - id: AHB-EXC-004
+    required: true
+  - id: AHB-EXC-005
+    required: true
+  - id: AHB-EXC-006
+    required: true
+  - id: AHB-EXC-007
+    required: true
+  - id: AHB-EXC-008
+    required: true
+  - id: AHB-EXC-009
+    required: true
+  - id: AHB-EXC-010
+    required: true
+  - id: AHB-STR-001
+    required: true
+  - id: AHB-STR-002
+    required: true
+  - id: AHB-STR-003
+    required: true
+  - id: AHB-STR-004
+    required: true
+  - id: AHB-STR-005
+    required: true
+  - id: AHB-USR-001
+    required: true
+  - id: AHB-USR-002
+    required: true
+  - id: AHB-USR-003
+    required: true
+  - id: AHB-USR-004
+    required: true
+  - id: AHB-PAR-001
+    required: true
+  - id: AHB-PAR-002
+    required: true
+  - id: AHB-PAR-003
+    required: true
+  - id: AHB-PAR-004
+    required: true
+  - id: AHB-PAR-005
+    required: true
+  - id: AHB-PAR-006
+    required: true
+  - id: AHB-MEM-001
+    required: true
+  - id: AHB-MEM-002
+    required: true
+  - id: AHB-MEM-003
+    required: true
+  - id: AHB-MEM-004
+    required: true
+  - id: AHB-MEM-005
+    required: true
+  - id: AHB-MEM-006
+    required: true
+  - id: AHB-MEM-007
+    required: true
+  - id: AHB-MEM-008
+    required: true
+  - id: AHB-MEM-009
+    required: true
+  - id: AHB-RST-001
+    required: true
+  - id: AHB-RST-002
+    required: true
+  - id: AHB-RST-003
+    required: true
+  - id: AHB-RST-004
+    required: true
+  - id: AHB-RST-005
+    required: true
+  - id: AHB-RST-006
+    required: true
+  - id: AHB-RST-007
+    required: true
+  - id: AHB-RST-008
+    required: true
+  - id: AHB-CHK-001
+    required: true
+  - id: AHB-CHK-002
+    required: true
+  - id: AHB-CHK-003
+    required: true
+  - id: AHB-CHK-004
+    required: true
+  - id: AHB-CHK-005
+    required: true
+  - id: AHB-CHK-006
+    required: true
+  - id: AHB-CHK-007
+    required: true
+  - id: AHB-CHK-008
+    required: true
+  - id: AHB-CHK-009
+    required: true
+  - id: AHB-NEG-001
+    required: true
+  - id: AHB-NEG-002
+    required: true
+  - id: AHB-NEG-003
+    required: true
+  - id: AHB-NEG-004
+    required: true
+  - id: AHB-NEG-005
+    required: true
+  - id: AHB-NEG-006
+    required: true
+  - id: AHB-COV-001
+    required: true
+  - id: AHB-COV-002
+    required: true
+  - id: AHB-COV-003
+    required: true
+  - id: AHB-COV-004
+    required: true
+  - id: AHB-COV-005
+    required: true
+  - id: AHB-COV-006
+    required: true
+  - id: AHB-COV-007
+    required: true
+  - id: AHB-COV-008
+    required: true
+  - id: AHB-COV-009
+    required: true
+  - id: AHB-UVM-001
+    required: true
+  - id: AHB-UVM-002
+    required: true
+  - id: AHB-UVM-003
+    required: true
+  - id: AHB-UVM-004
+    required: true
+  - id: AHB-UVM-005
+    required: true
+  - id: AHB-UVM-006
+    required: true
+  - id: AHB-UVM-007
+    required: true
+  - id: AHB-UVM-008
+    required: true
+  - id: AHB-UVM-009
+    required: true
+  - id: AHB-UVM-010
+    required: true
+  - id: AHB-NFR-001
+    required: true
+  - id: AHB-NFR-002
+    required: true
+  - id: AHB-NFR-003
+    required: true
+  - id: AHB-NFR-004
+    required: true
+  - id: AHB-NFR-005
+    required: true
+  - id: AHB-NFR-006
+    required: true
+  - id: AHB-NFR-007
+    required: true
+  - id: AHB-NFR-008
+    required: true
+  - id: AHB-ACC-001
+    required: true
+  - id: AHB-ACC-002
+    required: true
+  - id: AHB-ACC-003
+    required: true
+  - id: AHB-ACC-004
+    required: true
+  - id: AHB-ACC-005
+    required: true
+  - id: AHB-ACC-006
+    required: true
+  - id: AHB-ACC-007
+    required: true
+  - id: AHB-ACC-008
+    required: true
+coverage_bins:
+  requirement_coverage:
+  - AHB-SCP-001
+  - AHB-SCP-002
+  - AHB-SCP-003
+  - AHB-SCP-004
+  - AHB-SCP-005
+  - AHB-SCP-006
+  - AHB-SCP-007
+  - AHB-CFG-001
+  - AHB-CFG-002
+  - AHB-CFG-003
+  - AHB-CFG-004
+  - AHB-CFG-005
+  - AHB-CFG-006
+  - AHB-CFG-007
+  - AHB-CFG-008
+  - AHB-CFG-009
+  - AHB-CFG-010
+  - AHB-TRN-001
+  - AHB-TRN-002
+  - AHB-TRN-003
+  - AHB-TRN-004
+  - AHB-TRN-005
+  - AHB-TRN-006
+  - AHB-TRN-007
+  - AHB-TRN-008
+  - AHB-TRN-009
+  - AHB-TRN-010
+  - AHB-BAS-001
+  - AHB-BAS-002
+  - AHB-BAS-003
+  - AHB-BAS-004
+  - AHB-BAS-005
+  - AHB-BAS-006
+  - AHB-BAS-007
+  - AHB-BAS-008
+  - AHB-BAS-009
+  - AHB-BAS-010
+  - AHB-BST-001
+  - AHB-BST-002
+  - AHB-BST-003
+  - AHB-BST-004
+  - AHB-BST-005
+  - AHB-BST-006
+  - AHB-BST-007
+  - AHB-BST-008
+  - AHB-BST-009
+  - AHB-BST-010
+  - AHB-BST-011
+  - AHB-RSP-001
+  - AHB-RSP-002
+  - AHB-RSP-003
+  - AHB-RSP-004
+  - AHB-RSP-005
+  - AHB-RSP-006
+  - AHB-RSP-007
+  - AHB-RSP-008
+  - AHB-LCK-001
+  - AHB-LCK-002
+  - AHB-LCK-003
+  - AHB-LEG-001
+  - AHB-LEG-002
+  - AHB-LEG-003
+  - AHB-LEG-004
+  - AHB-LEG-005
+  - AHB-LEG-006
+  - AHB-LEG-007
+  - AHB-LEG-008
+  - AHB-LEG-009
+  - AHB-LEG-010
+  - AHB-SEC-001
+  - AHB-SEC-002
+  - AHB-SEC-003
+  - AHB-SEC-004
+  - AHB-SEC-005
+  - AHB-SEC-006
+  - AHB-ATM-001
+  - AHB-ATM-002
+  - AHB-EXC-001
+  - AHB-EXC-002
+  - AHB-EXC-003
+  - AHB-EXC-004
+  - AHB-EXC-005
+  - AHB-EXC-006
+  - AHB-EXC-007
+  - AHB-EXC-008
+  - AHB-EXC-009
+  - AHB-EXC-010
+  - AHB-STR-001
+  - AHB-STR-002
+  - AHB-STR-003
+  - AHB-STR-004
+  - AHB-STR-005
+  - AHB-USR-001
+  - AHB-USR-002
+  - AHB-USR-003
+  - AHB-USR-004
+  - AHB-PAR-001
+  - AHB-PAR-002
+  - AHB-PAR-003
+  - AHB-PAR-004
+  - AHB-PAR-005
+  - AHB-PAR-006
+  - AHB-MEM-001
+  - AHB-MEM-002
+  - AHB-MEM-003
+  - AHB-MEM-004
+  - AHB-MEM-005
+  - AHB-MEM-006
+  - AHB-MEM-007
+  - AHB-MEM-008
+  - AHB-MEM-009
+  - AHB-RST-001
+  - AHB-RST-002
+  - AHB-RST-003
+  - AHB-RST-004
+  - AHB-RST-005
+  - AHB-RST-006
+  - AHB-RST-007
+  - AHB-RST-008
+  - AHB-CHK-001
+  - AHB-CHK-002
+  - AHB-CHK-003
+  - AHB-CHK-004
+  - AHB-CHK-005
+  - AHB-CHK-006
+  - AHB-CHK-007
+  - AHB-CHK-008
+  - AHB-CHK-009
+  - AHB-NEG-001
+  - AHB-NEG-002
+  - AHB-NEG-003
+  - AHB-NEG-004
+  - AHB-NEG-005
+  - AHB-NEG-006
+  - AHB-COV-001
+  - AHB-COV-002
+  - AHB-COV-003
+  - AHB-COV-004
+  - AHB-COV-005
+  - AHB-COV-006
+  - AHB-COV-007
+  - AHB-COV-008
+  - AHB-COV-009
+  - AHB-UVM-001
+  - AHB-UVM-002
+  - AHB-UVM-003
+  - AHB-UVM-004
+  - AHB-UVM-005
+  - AHB-UVM-006
+  - AHB-UVM-007
+  - AHB-UVM-008
+  - AHB-UVM-009
+  - AHB-UVM-010
+  - AHB-NFR-001
+  - AHB-NFR-002
+  - AHB-NFR-003
+  - AHB-NFR-004
+  - AHB-NFR-005
+  - AHB-NFR-006
+  - AHB-NFR-007
+  - AHB-NFR-008
+  - AHB-ACC-001
+  - AHB-ACC-002
+  - AHB-ACC-003
+  - AHB-ACC-004
+  - AHB-ACC-005
+  - AHB-ACC-006
+  - AHB-ACC-007
+  - AHB-ACC-008
+  feature_coverage:
+  - lite32/roles
+  - lite32/pipeline
+  - lite32/burst
+  - lite32/wait
+  - lite32/error
+  - lite32/reset
+  - lite32/ral
+  - lite32/system
+  - lite32/configuration
+  - lite32/memory
+  - lite32/bridge
+  - ahb5_128/roles
+  - ahb5_128/pipeline
+  - ahb5_128/burst
+  - ahb5_128/wait
+  - ahb5_128/error
+  - ahb5_128/reset
+  - ahb5_128/strobe
+  - ahb5_128/exclusive
+  - ahb5_128/parity
+  - ahb5_128/user
+  - ahb5_128/ral
+  - ahb5_128/system
+  - ahb5_128/configuration
+  - ahb5_128/memory
+  - ahb5_128/bridge
+  - ahb5_128/atomicity
+  - classic32/roles
+  - classic32/pipeline
+  - classic32/burst
+  - classic32/wait
+  - classic32/error
+  - classic32/reset
+  - classic32/classic
+  - classic32/ral
+  - classic32/system
+  - classic32/configuration
+  - classic32/memory
+  - classic32/bridge
+  cross_coverage:
+  - lite32/rw0/burst0/size0
+  - lite32/rw0/burst0/size1
+  - lite32/rw0/burst0/size2
+  - lite32/rw0/burst1/size0
+  - lite32/rw0/burst1/size1
+  - lite32/rw0/burst1/size2
+  - lite32/rw0/burst2/size0
+  - lite32/rw0/burst2/size1
+  - lite32/rw0/burst2/size2
+  - lite32/rw0/burst3/size0
+  - lite32/rw0/burst3/size1
+  - lite32/rw0/burst3/size2
+  - lite32/rw0/burst4/size0
+  - lite32/rw0/burst4/size1
+  - lite32/rw0/burst4/size2
+  - lite32/rw0/burst5/size0
+  - lite32/rw0/burst5/size1
+  - lite32/rw0/burst5/size2
+  - lite32/rw0/burst6/size0
+  - lite32/rw0/burst6/size1
+  - lite32/rw0/burst6/size2
+  - lite32/rw0/burst7/size0
+  - lite32/rw0/burst7/size1
+  - lite32/rw0/burst7/size2
+  - lite32/rw1/burst0/size0
+  - lite32/rw1/burst0/size1
+  - lite32/rw1/burst0/size2
+  - lite32/rw1/burst1/size0
+  - lite32/rw1/burst1/size1
+  - lite32/rw1/burst1/size2
+  - lite32/rw1/burst2/size0
+  - lite32/rw1/burst2/size1
+  - lite32/rw1/burst2/size2
+  - lite32/rw1/burst3/size0
+  - lite32/rw1/burst3/size1
+  - lite32/rw1/burst3/size2
+  - lite32/rw1/burst4/size0
+  - lite32/rw1/burst4/size1
+  - lite32/rw1/burst4/size2
+  - lite32/rw1/burst5/size0
+  - lite32/rw1/burst5/size1
+  - lite32/rw1/burst5/size2
+  - lite32/rw1/burst6/size0
+  - lite32/rw1/burst6/size1
+  - lite32/rw1/burst6/size2
+  - lite32/rw1/burst7/size0
+  - lite32/rw1/burst7/size1
+  - lite32/rw1/burst7/size2
+  - ahb5_128/rw0/burst0/size0
+  - ahb5_128/rw0/burst0/size1
+  - ahb5_128/rw0/burst0/size2
+  - ahb5_128/rw0/burst0/size3
+  - ahb5_128/rw0/burst0/size4
+  - ahb5_128/rw0/burst1/size0
+  - ahb5_128/rw0/burst1/size1
+  - ahb5_128/rw0/burst1/size2
+  - ahb5_128/rw0/burst1/size3
+  - ahb5_128/rw0/burst1/size4
+  - ahb5_128/rw0/burst2/size0
+  - ahb5_128/rw0/burst2/size1
+  - ahb5_128/rw0/burst2/size2
+  - ahb5_128/rw0/burst2/size3
+  - ahb5_128/rw0/burst2/size4
+  - ahb5_128/rw0/burst3/size0
+  - ahb5_128/rw0/burst3/size1
+  - ahb5_128/rw0/burst3/size2
+  - ahb5_128/rw0/burst3/size3
+  - ahb5_128/rw0/burst3/size4
+  - ahb5_128/rw0/burst4/size0
+  - ahb5_128/rw0/burst4/size1
+  - ahb5_128/rw0/burst4/size2
+  - ahb5_128/rw0/burst4/size3
+  - ahb5_128/rw0/burst4/size4
+  - ahb5_128/rw0/burst5/size0
+  - ahb5_128/rw0/burst5/size1
+  - ahb5_128/rw0/burst5/size2
+  - ahb5_128/rw0/burst5/size3
+  - ahb5_128/rw0/burst5/size4
+  - ahb5_128/rw0/burst6/size0
+  - ahb5_128/rw0/burst6/size1
+  - ahb5_128/rw0/burst6/size2
+  - ahb5_128/rw0/burst6/size3
+  - ahb5_128/rw0/burst6/size4
+  - ahb5_128/rw0/burst7/size0
+  - ahb5_128/rw0/burst7/size1
+  - ahb5_128/rw0/burst7/size2
+  - ahb5_128/rw0/burst7/size3
+  - ahb5_128/rw0/burst7/size4
+  - ahb5_128/rw1/burst0/size0
+  - ahb5_128/rw1/burst0/size1
+  - ahb5_128/rw1/burst0/size2
+  - ahb5_128/rw1/burst0/size3
+  - ahb5_128/rw1/burst0/size4
+  - ahb5_128/rw1/burst1/size0
+  - ahb5_128/rw1/burst1/size1
+  - ahb5_128/rw1/burst1/size2
+  - ahb5_128/rw1/burst1/size3
+  - ahb5_128/rw1/burst1/size4
+  - ahb5_128/rw1/burst2/size0
+  - ahb5_128/rw1/burst2/size1
+  - ahb5_128/rw1/burst2/size2
+  - ahb5_128/rw1/burst2/size3
+  - ahb5_128/rw1/burst2/size4
+  - ahb5_128/rw1/burst3/size0
+  - ahb5_128/rw1/burst3/size1
+  - ahb5_128/rw1/burst3/size2
+  - ahb5_128/rw1/burst3/size3
+  - ahb5_128/rw1/burst3/size4
+  - ahb5_128/rw1/burst4/size0
+  - ahb5_128/rw1/burst4/size1
+  - ahb5_128/rw1/burst4/size2
+  - ahb5_128/rw1/burst4/size3
+  - ahb5_128/rw1/burst4/size4
+  - ahb5_128/rw1/burst5/size0
+  - ahb5_128/rw1/burst5/size1
+  - ahb5_128/rw1/burst5/size2
+  - ahb5_128/rw1/burst5/size3
+  - ahb5_128/rw1/burst5/size4
+  - ahb5_128/rw1/burst6/size0
+  - ahb5_128/rw1/burst6/size1
+  - ahb5_128/rw1/burst6/size2
+  - ahb5_128/rw1/burst6/size3
+  - ahb5_128/rw1/burst6/size4
+  - ahb5_128/rw1/burst7/size0
+  - ahb5_128/rw1/burst7/size1
+  - ahb5_128/rw1/burst7/size2
+  - ahb5_128/rw1/burst7/size3
+  - ahb5_128/rw1/burst7/size4
+  - classic32/rw0/burst0/size0
+  - classic32/rw0/burst0/size1
+  - classic32/rw0/burst0/size2
+  - classic32/rw0/burst1/size0
+  - classic32/rw0/burst1/size1
+  - classic32/rw0/burst1/size2
+  - classic32/rw0/burst2/size0
+  - classic32/rw0/burst2/size1
+  - classic32/rw0/burst2/size2
+  - classic32/rw0/burst3/size0
+  - classic32/rw0/burst3/size1
+  - classic32/rw0/burst3/size2
+  - classic32/rw0/burst4/size0
+  - classic32/rw0/burst4/size1
+  - classic32/rw0/burst4/size2
+  - classic32/rw0/burst5/size0
+  - classic32/rw0/burst5/size1
+  - classic32/rw0/burst5/size2
+  - classic32/rw0/burst6/size0
+  - classic32/rw0/burst6/size1
+  - classic32/rw0/burst6/size2
+  - classic32/rw0/burst7/size0
+  - classic32/rw0/burst7/size1
+  - classic32/rw0/burst7/size2
+  - classic32/rw1/burst0/size0
+  - classic32/rw1/burst0/size1
+  - classic32/rw1/burst0/size2
+  - classic32/rw1/burst1/size0
+  - classic32/rw1/burst1/size1
+  - classic32/rw1/burst1/size2
+  - classic32/rw1/burst2/size0
+  - classic32/rw1/burst2/size1
+  - classic32/rw1/burst2/size2
+  - classic32/rw1/burst3/size0
+  - classic32/rw1/burst3/size1
+  - classic32/rw1/burst3/size2
+  - classic32/rw1/burst4/size0
+  - classic32/rw1/burst4/size1
+  - classic32/rw1/burst4/size2
+  - classic32/rw1/burst5/size0
+  - classic32/rw1/burst5/size1
+  - classic32/rw1/burst5/size2
+  - classic32/rw1/burst6/size0
+  - classic32/rw1/burst6/size1
+  - classic32/rw1/burst6/size2
+  - classic32/rw1/burst7/size0
+  - classic32/rw1/burst7/size1
+  - classic32/rw1/burst7/size2
+  - lite32/wait0/responseOKAY
+  - lite32/wait0/responseERROR
+  - lite32/wait1/responseOKAY
+  - lite32/wait1/responseERROR
+  - lite32/wait2/responseOKAY
+  - lite32/wait2/responseERROR
+  - lite32/wait3/responseOKAY
+  - lite32/wait3/responseERROR
+  - ahb5_128/wait0/responseOKAY
+  - ahb5_128/wait0/responseERROR
+  - ahb5_128/wait0/responseEXCLUSIVE_FAIL
+  - ahb5_128/wait1/responseOKAY
+  - ahb5_128/wait1/responseERROR
+  - ahb5_128/wait1/responseEXCLUSIVE_FAIL
+  - ahb5_128/wait2/responseOKAY
+  - ahb5_128/wait2/responseERROR
+  - ahb5_128/wait2/responseEXCLUSIVE_FAIL
+  - ahb5_128/wait3/responseOKAY
+  - ahb5_128/wait3/responseERROR
+  - ahb5_128/wait3/responseEXCLUSIVE_FAIL
+  - classic32/wait0/responseOKAY
+  - classic32/wait0/responseERROR
+  - classic32/wait1/responseOKAY
+  - classic32/wait1/responseERROR
+  - classic32/wait2/responseOKAY
+  - classic32/wait2/responseERROR
+  - classic32/wait3/responseOKAY
+  - classic32/wait3/responseERROR
+  assertion_coverage:
+  - AHB-CHECK-ALIGN
+  - AHB-CHECK-BOUNDARY
+  - AHB-CHECK-BURST-ATTR
+  - AHB-CHECK-BUSY
+  - AHB-CHECK-CAPABILITY
+  - AHB-CHECK-CONTROL-X
+  - AHB-CHECK-DATA-X
+  - AHB-CHECK-ERROR-TWO
+  - AHB-CHECK-EX-FORM
+  - AHB-CHECK-EX-OVERLAP
+  - AHB-CHECK-EXOKAY
+  - AHB-CHECK-HOLD-ADDR
+  - AHB-CHECK-HOLD-AUSER
+  - AHB-CHECK-HOLD-STRB
+  - AHB-CHECK-HOLD-WDATA
+  - AHB-CHECK-HOLD-WUSER
+  - AHB-CHECK-PAR-ADDR
+  - AHB-CHECK-PAR-AUSER
+  - AHB-CHECK-PAR-BUSER
+  - AHB-CHECK-PAR-CTRL1
+  - AHB-CHECK-PAR-CTRL2
+  - AHB-CHECK-PAR-PROT
+  - AHB-CHECK-PAR-RDATA
+  - AHB-CHECK-PAR-READY
+  - AHB-CHECK-PAR-READYOUT
+  - AHB-CHECK-PAR-RESP
+  - AHB-CHECK-PAR-RUSER
+  - AHB-CHECK-PAR-SEL
+  - AHB-CHECK-PAR-STRB
+  - AHB-CHECK-PAR-TRANS
+  - AHB-CHECK-PAR-WDATA
+  - AHB-CHECK-PAR-WUSER
+  - AHB-CHECK-RESP-CODE
+  - AHB-CHECK-RESP-PHASE
+  - AHB-CHECK-RESP-X
+  - AHB-CHECK-SEQ
+  - AHB-CHECK-SEQ-ADDR
+  - AHB-CHECK-SIZE
+  - AHB-CHECK-WATCHDOG
+  - AHB-CHECK-ADDR-X
+  - SVA-ALIGN
+  - SVA-ERROR-TWO

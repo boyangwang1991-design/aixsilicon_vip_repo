@@ -1,44 +1,71 @@
-# AHB VIP requirement baseline
+# AHB VIP 需求基线
 
-**Profile**: FULL_UVM. Development version 0.1.0; target 1.0.0.
+## 1. 范围
 
-# 1. Overview
-The supplied contract is preserved verbatim in contract.md. Its AHB identifiers remain authoritative; no renumbering or scope reduction. Development proceeds autonomously under user authorization.
-# 2. Protocol Capability
-AHB_LITE, AHB5 Issue C, and AHB_CLASSIC are separate profiles. All contract requirements target V1.0 with P0 priority. Scope and applicability are inherited from contract sections, not silently waived.
-# 3. Protocol Rules
-Source S1 IHI0033C; S2 B.b and S3 IHI0011A require additional source review before compatibility qualification. See protocol_rule_matrix.md.
-# 7. Configuration
-Separate structural interface parameters, profile/issue, feature presence, agent role, responder policy, DUT capability, and checker settings. Illegal combinations fail before run. Defaults and ranges are exactly contract §3.
-# 8. External Interface
-Parameterized virtual interface, factory/config_db agent configuration, sequence request/response, independent observation and violation analysis ports. Manager, subordinate, passive and disabled modes.
-# 10. Coverage
-Five layers with bin-level merging and capability-specific denominators. Required bins and critical crosses need 100%, as contract overrides generic Suite thresholds. Negative injection never fills normal bins.
-# 13. Debug
-Stable rule IDs, cycle, instance, phase, address and transaction context. Clock watchdog is environment policy; no invented protocol timeout.
-# 17. Machine-readable
-YAML profiles, requirement mapping, regression and qualification evidence. Configuration fingerprint and seed accompany runs.
-# 18. Engineering
-UVM 1.2/VCS primary; IEEE1800.2 and another commercial simulator separately verified. Build from self_test/Makefile, no absolute installation paths in assets.
-# 19. Compatibility
-0.1.0 is a development candidate, not V1.0. Unsupported/unverified capabilities must remain explicit. Classic and B.b cannot inherit Issue C evidence.
-# 20. Deliverable
-src, unit_test, self_test, config, examples, FuseSoC, docs and reports. Skill feedback remains in reports/skill-improvement-report.md.
-# 22. Qualification
-All contract §19 gates apply. 100 fixed seeds per major configuration, at least one million effective beats, independent vectors, checker positive/negative and six mutation families. No result is inferred from a file merely existing.
-# 23. Limitations
-Full contract qualification remains pending until RTM evidence is complete. Local HWIF is Lite-only and lacks HSEL/HMASTLOCK/HREADYOUT separation: the verification interface is an explicit development binding; no HWIF compatibility claim. S2/S3 source review and cross-tool acceptance are NOT_RUN until evidenced.
+**Profile**: FULL_UVM。开发版本 0.1.0，完整合同目标 1.0.0。contract.md 原文与全部 169 条需求保留；运行日志和中间数据放在本 VIP 的 build；reports 直接保留最新七类流程报告。
+
+## 2. 协议能力
+
+AHB-Lite、AHB5 Issue C、Classic 分别配置和验收；不能用 Issue C 的结果代替其他版次。优先级以 requirements.yaml 为准，所有适用项都必须验收。
+
+## 3. 规则依据
+
+协议来源及尚需全文复核的 S2/S3 见 protocol_rule_matrix.md；此次回归不新增规范兼容性声明。
+
+## 7. 配置
+
+接口结构参数、剖面、版次、信号存在性、角色、响应策略与 checker 配置分离；边界和依赖按合同第 3 节。
+
+## 8. 外部接口
+
+参数化 ahb_if；factory/config_db；sequence 请求/响应；独立 monitor 的事务、周期、错误和突发分析端口。支持 Manager、Subordinate、Passive、Disabled。
+
+## 10. 覆盖
+
+需求、特性、交叉、规则与负向证据分开。完整 1.0.0 合同的强制 bins 和关键交叉目标为 100%；0.1.0 按 acceptance.md 声明范围审阅；只在兼容配置中按 bin 合并。覆盖仪器化不完整时不能用测试通过代替覆盖命中。
+
+## 13. 调试
+
+错误带规则 ID、周期、实例、阶段、地址和事务上下文；环境 watchdog 不等于协议超时。
+
+## 17. 机器输入
+
+verification-plan.yaml 冻结必测集合及 bins；profiles.yaml 描述配置；requirements.yaml 保存权威 ID。出口报告遵循 vip.acceptance/v1。
+
+## 18. 工程
+
+VCS/UVM 1.2 为现有执行入口。IEEE1800.2 和第二商业工具必须独立验证。所有工作目录、日志和生成 core 均在本 VIP 的 build；流程报告保留在本 VIP 的 reports。
+
+## 19. 兼容性
+
+0.1.0 是开发候选；未验证能力必须显式标明。公共 HWIF 完整兼容性尚未建立。
+
+## 20. 交付
+
+稳定输入包含源码、配置、测试、示例和中文文档；可复现运行产物放 build，不提交或上传。
+
+## 22. 验收
+
+全部合同需求、每个主要配置 100 个固定 seed、至少百万有效 beat、独立向量、正负向 checker 和六类变异；不得缩小合同分母。
+
+## 23. 限制
+
 当前实现限制（影响项以RTM为准）：
 - LIM-001：结构参数在build冻结，运行时修改会在后续采样边沿报AHB-CONFIG-FROZEN；完整响应回调链、BUSY计划、块拆分和reset重提交API尚缺。
 - LIM-002：共享memory的同周期同址写以SV调用顺序提交，尚无显式跨实例仲裁；不得用于证明调度无关的同址冲突或系统原子性。
 - LIM-003：analysis port对象按UVM只读订阅约定使用；周期/完成/诊断事件发布深拷贝，保护monitor内部状态。订阅者若需编辑应自行clone；同一analysis port各订阅者之间仍遵守UVM只读约定。
-- LIM-004：早期外部连线与clocking输出的logic多驱动警告已通过interface net绑定修复。最终VCS编译日志需与reports/compile_warning_review.yaml对应；第二工具仍未验证。
+- LIM-004：早期外部连线与clocking输出的logic多驱动警告已通过interface net绑定修复。VCS 编译告警应在对应运行的证据中复核；第二工具仍未验证。
 - LIM-005：完整HPROT语义、所有扩展/经典/阶段覆盖及系统可见性checker尚缺；bridge scoreboard已编译，转换负向测试未完成。
 - LIM-006：UVM1.2/VCS实测；IEEE1800.2与第二商业仿真器未运行。百万beat完成不等于RSS泄漏、各模式性能或全发布验收通过。
 
-# 24. Requirement Priority
-All entries below are P0 / target V1.0 / required in the profile inherited from contract.md. No exclusions approved.
 
+
+## 24. 权威需求
+
+以下原文和验收条件保持不变。
+
+| ID | 需求 | 验收 |
+| --- | --- | --- |
 | AHB-SCP-001 | 必须提供 Manager Active、Subordinate Active、Passive 三种角色；Active 实例必须包含独立 monitor。 | T/I：三种角色分别运行；Passive 对所有总线信号零驱动。 |
 | AHB-SCP-002 | 必须将协议剖面、规范版次、角色、信号 presence、运行策略分开配置；不允许仅用一个 `ahb5_enable` 控制全部差异。 | I/N：非法组合在 run 前失败并指出冲突字段。 |
 | AHB-SCP-003 | 必须支持单 Manager/单 Subordinate、单 Manager/多 Subordinate、多 Manager/多 Subordinate 的测试环境组装。 | T：分别验证寻址、响应路由和并发竞争。 |
@@ -208,9 +235,15 @@ All entries below are P0 / target V1.0 / required in the profile inherited from 
 | AHB-ACC-006 | 所有主要接口参数取最小、默认、最大值，并对 feature dependency 做组合覆盖；不要求穷举无意义全组合。 | T/I：明确 pairwise 及关键高阶组合清单。 |
 | AHB-ACC-007 | 声明兼容旧版或经典剖面前，必须完成对应规范全文核对、差异规则表及回归，不能复用 Issue C 标志冒充旧版验证。 | I/T：S2/S3 审查记录与适用性清单齐全。 |
 | AHB-ACC-008 | 最终交付必须包括需求、架构、验证方案、RTM、用户指南、源码、示例、打包文件、回归清单、测试报告和已知限制。 | I：在干净工作区复现发布 smoke 与代表性回归。 |
-# 25. Requirement Traceability Matrix
-Each authoritative ID has exactly one master row in rtm.md; parent acceptance responsibility is retained.
-# 26. G0 Requirement Review Checklist
-Input scope, IDs, acceptance, profile dependencies and delivery are captured. Source review for older profiles is outstanding; full G0 is NOT_RUN. This does not prevent user-authorized implementation of the reviewed Issue C behavior.
-# 27. Requirement Completion Definition
-Complete means all original IDs retained and applicable protocol facts reviewed. Gate evidence lives in reports.
+
+## 25. 追溯
+
+rtm.md 保存静态映射；逐次执行状态只在 build 运行报告。
+
+## 26. 需求评审
+
+核对 ID、配置范围、规则依据和交付；S2/S3 全文审查缺失将阻断完整 G0。
+
+## 27. 完成定义
+
+保留全部需求并具备适用规范的评审证据；由报告 metadata 判定，不能以文档存在代替通过。

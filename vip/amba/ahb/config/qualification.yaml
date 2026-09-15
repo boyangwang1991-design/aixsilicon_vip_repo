@@ -1,0 +1,5 @@
+coverage_thresholds:
+  requirement_coverage: 100
+  feature_coverage: 100
+  cross_coverage: 100
+  assertion_coverage: 100

@@ -1,50 +1,66 @@
-# AHB validation plan
-# 1. Purpose
-Validate actual bus behavior independently of producer logic. Contract scope remains all 169 requirements.
-# 2. Validation Objectives
-Every released rule has positive and exact negative evidence; no false completion, duplicate write, lost abort, or inactive-lane corruption.
-# 3. Validation Scope
-Lite/AHB5/Classic are distinct. Development full target is only the currently implemented test executable set; it is not contract full acceptance.
-# 4. Validation Strategy
-L1 pure golden arithmetic, memory, policy, configuration and transactions. L2 standalone bus vectors with handwritten expected addresses/data. L3 independent checker injections. L4 active agents against observations. L5 multi-instance/system. L6 stress. L7 cross-tool qualification.
-# 8. Smoke Validation
-32 unique back-to-back writes followed by 32 reads, exact data checks, 64 completions, 32 memory commits. Run wait=0,1,3,15,256. No UVM errors/fatals or missing completion oracle allowed.
-# 13. Monitor Validation
-V01 two different address/data writes; V02 three waits then read; V03 fixed BUSY→SEQ; V04 INCR BUSY→NONSEQ; V05 two-cycle ERROR candidate cancellation; V06 non-base WRAP4; V11 reset abort. V07/08 strobe and V09 exclusive in model/extension tests; V10 ownership and V12 parity require separate vectors beyond existing end-to-end coverage.
-# 17. Protocol Checker Validation
-negative.f uses explicit sampled cycles with exact rule ID, cycle and count. Every unrelated diagnostic causes failure. Legal baseline checks unknown inactive data and IDLE address changes. Positive signal-level vectors exercise exception paths.
-# 19. Violation / Mutation Validation
-The following source mutations are required independently of signal fault injection; each uses a fresh copied workspace and expected failing oracle.
+# AHB VIP 验证计划
 
-| Mutation | Injected change | Expected test | Priority |
-| --- | --- | --- | --- |
-| MUT-ADDR | increment by twice beat size | unit wrap/address golden | P0 |
-| MUT-PIPE | monitor associates next address with prior data | vectors V01 | P0 |
-| MUT-ERROR | suppress first ERROR cycle requirement | negative two-cycle oracle | P0 |
-| MUT-MASK | commit inactive strobe lanes | unit inactive_strobe | P0 |
-| MUT-EXCL | skip reservation invalidation | unit granule_invalidation | P0 |
-| MUT-PARITY | invert generated parity | unit parity_tail10/17 | P0 |
+## 1. 目的
 
-# 26. Configuration Validation
-Parameter edge matrix AW10/17/33/64, DW8..1024, zero/nonzero optional widths, extension dependency rejection. Mixed 32-bit Lite and 128-bit AHB5 in the same simulation. Seeded YAML configuration must match actual elaborated component settings.
-# 31. RAL Validation
-Frontdoor byte/full reads/writes, endian lanes, failed response, abort and exclusive exclusion; unsupported sparse mask rejected before drive; no implicit RMW.
-# 32. Coverage Model Validation
-Record explicit bin IDs with counts, separate normal/error/abort/injection. Merge only compatible profile definitions; derive union by IDs. Mandatory denominators are frozen from applicable capabilities, not observed hits.
-# 37. Regression Strategy
-Required tiers (full): unit, vectors, smoke, negative, extensions, burst, error, reset, ral, classic, system, mutation, stress, portability.
-Contract acceptance requires 100 seeds per major configuration and one million completed valid beats. No missing tier can be silently removed. Development run.py full executes implemented baseline tiers only.
-# 39. Simulator Validation
-VCS/UVM1.2 primary. Another commercial simulator and IEEE1800.2 implementation separately compiled/run; absent tools are NOT_RUN.
-# 40. Build / Packaging Validation
-Compile packages in dependency order and include class bodies exactly once. Fresh build uses self_test/Makefile and FuseSoC smoke/regression targets. Require process success plus positive oracle plus zero unexpected errors/fatals.
-# 41. Metadata Validation
-config/profiles.yaml and requirements.yaml validate types, ranges, dependencies and authoritative ID set; run fingerprint includes actual elaboration inputs and source version.
-# 48. Validation Test Naming
-Executable tier and test ID appear in logs and machine summaries. Fixed random seed passed to simulator.
-# 49. Validation Case Template
-Each case has requirement IDs, applicability, trigger, expected cycle/event/data, exact error expectation and command/log. NOT_RUN stays in required denominator.
-# 50. Validation Matrix
+独立验证总线行为；完整合同仍为 169 条需求。
+
+## 2. 目标
+
+无虚假完成、重复写、丢失中止或无效 lane 污染；每条发布 checker 都需要合法无误报与目标违规证据。
+
+## 3. 范围
+
+开发 full 的 13 组现有测试与合同完整验收分开；未实现项保留在冻结计划。
+
+## 4. 策略
+
+L1 算法/对象黄金值；L2 手写独立总线向量；L3 规则注入；L4 主从与监视；L5 多实例系统；L6 压力；L7 跨工具。
+
+## 8. 基础回归
+
+smoke 使用源码中的连续读写和逐周期断言；等待值 0、1、3、15、256 均重跑，以实际完成计数为准。
+
+## 13. 独立向量
+
+V01 阶段关联、V02 等待读、V03 固定 BUSY、V04 INCR BUSY、V05 ERROR 取消、V06 WRAP、V11 reset。V10 所有权和 V12 parity 的独立向量仍需补全。
+
+## 19. 变异
+
+MUT-ADDR 地址增量；MUT-PIPE 阶段错配；MUT-ERROR 抑制两周期检查；MUT-MASK 无效 lane 写入；MUT-EXCL 缺失预约失效；MUT-PARITY 校验位反转。必须编译成功且目标断言准确失败才算检出。优先级在机器计划冻结。
+
+## 26. 配置
+
+AW10/17/33/64、DW8..1024、可选零/非零宽度和依赖冲突；混合 Lite32 与 AHB5_128。三个配置各运行 seed 1..100 的见证测试，不能代替完整随机功能矩阵。
+
+## 32. 覆盖分母
+
+verification-plan.yaml 冻结 169 个需求、按剖面列出的能力簇、现有 covergroup 的有效宽度 rw×burst×size 和 wait×response，以及 checker/SVA ID。功能簇不是完整合同细粒度覆盖模型；该模型缺口必须作为 mandatory OPEN，不能据此认证。未建立可靠映射的 bin 记 0（没有验收证据），不猜测命中。
+
+## 37. 回归
+
+保留 regression.yaml 的全部验收层。新增明确的 compile、等待矩阵、种子见证、IEEE1800.2 与全配置矩阵条目；门禁按冻结集合计算。压力目标至少一百万有效 beat。
+
+## 39. 工具
+
+VCS/UVM1.2 实测；第二商业模拟器和 IEEE1800.2 未具备适配时标 NOT_RUN/BLOCKED。
+
+## 40. 构建
+
+新版 suite 从本次隔离输入构建，core 根据 config/build.yaml 生成。检查命令退出码、正向完成标记与非预期错误。
+
+## 41. 元数据
+
+vip.execution/v1；精确绑定输入指纹、计划哈希、运行 ID、seed、真实工具版本和证据 SHA256。
+
+## 48. 命名
+
+测试 tier、seed、等待值进入原始记录和日志；报告 case ID 与机器计划一致。
+
+## 49. 用例
+
+每项记录触发、独立预期、命令、证据与状态；未运行必测项不能被省略。
+
+## 50. 原合同验收矩阵
 
 - AHB-SCP-001 — T/I：三种角色分别运行；Passive 对所有总线信号零驱动。
 - AHB-SCP-002 — I/N：非法组合在 run 前失败并指出冲突字段。
@@ -215,13 +231,23 @@ Each case has requirement IDs, applicability, trigger, expected cycle/event/data
 - AHB-ACC-006 — T/I：明确 pairwise 及关键高阶组合清单。
 - AHB-ACC-007 — I/T：S2/S3 审查记录与适用性清单齐全。
 - AHB-ACC-008 — I：在干净工作区复现发布 smoke 与代表性回归。
-# 51. Requirement Coverage Review
-Master RTM holds per-ID final state, and test source/log references. Partial supporting tests do not automatically close a compound requirement.
-# 52. Exit Criteria
-All applicable requirements and mandatory bins 100%; full directed suite; 100 seeds; million beats; six mutation classes; second tool; no unreviewed warnings.
-# 53. Validation Evidence
-reports/logs and reports/regression hold commands, versions, exit status, oracles, timestamps and source fingerprints.
-# 54. Validation Review Checklist
-This is a frozen full-contract plan; implemented tests do not redefine its denominator. Any missing mandatory tier blocks G3/G5.
-# 55. Definition of Validation Plan Complete
-All original acceptance statements remain linked to executable or explicitly pending tests.
+
+## 51. 需求审查
+
+复合需求必须全部满足才可通过；只有支持性见证的项保留未验收。
+
+## 52. 退出条件
+
+所有适用需求和强制 bins 100%，全部定向测试、每配置 100 seed、百万 beat、六类变异、第二工具及告警审查。
+
+## 53. 证据
+
+本 VIP 的 build 保存原始日志、执行记录和机器判定；reports/latest.md 保存最新中文综合报告。最新六份阶段报告及 METADATA 直接位于 reports，不建立 run-id 子目录，不保留多轮历史报告。冻结执行副本及机器判定留在 build。
+
+## 54. 审查
+
+实际执行集合不能反向缩小分母。缺失工具或能力明确阻断完整 G5。
+
+## 55. 完成定义
+
+保留全部原始验收条件；本次结论只基于对应执行证据。

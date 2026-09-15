@@ -1,3 +1,4 @@
++incdir+.
 +incdir+../src
 ../src/ahb_types_pkg.sv
 ../src/ahb_if.sv

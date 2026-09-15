@@ -1,21 +1,21 @@
 # AHB UVM VIP — 0.1.0 开发版本
 
-开发目录位于 `aixsilicon_vip_repo/vip/amba/ahb`。基于相邻 `ahb_contract.md` 实现，使用 vip-development-suite；当前不是全规格认证的 1.0.0 发布。
+本资产实现 AHB-Lite、AHB5 与 Classic 的部分能力，完整验收目标为 [169 条原始合同](docs/contract.md)。开发用例通过不等于完整 1.0.0 资格认证。
 
-已实现参数化 interface、Manager/Subordinate/Passive agent、独立 monitor/checker、流水驱动、burst、memory/reservation、AHB5 strobe/USER/parity、经典仲裁及 RETRY/SPLIT、RAL、scoreboard 和自验证工程。实际支持范围与缺口见 [逐项 RTM](docs/rtm.md) 和 [用户指南](docs/user-guide.md)。
+- [中文使用指南](docs/user-guide.md)
+- [文档导航](docs/README.md)
+- [最新综合报告](reports/qualification.md)
 
-从本目录运行（使用 workflow 根 uv 环境；需要 VCS/UVM1.2 许可证）：
+## 目录约定
 
-```bash
-uv run --no-sync python tools/run.py full
-uv run --no-sync python tools/run.py stress --seed 1 --count 500000
-uv run --no-sync python tools/seed_matrix.py
-uv run --no-sync python tools/mutate.py
-uv run --no-sync fusesoc --cores-root=. run --target=smoke --tool=vcs aixsilicon:vip:ahb:0.1.0
-```
+reports/ 直接保存最新一轮的七类报告，以 qualification.md 为综合入口，不建立 run-id 子目录。日志、编译产物、波形、缓存、机器中间数据和历史归档全部放在本 VIP 的 build/，不使用工作区根 build，不提交或上传 build。
 
-`full` 是13组开发回归；合同发布矩阵另见 `config/regression.yaml`。完整发布还需要补齐实现缺口、强制覆盖和跨工具认证。源文件必须按core顺序编译；class文件由package include。
+## 运行入口
 
-- [回归结果](reports/regression/regression_summary.yaml)、[变异结果](reports/mutation/mutation_summary.yaml)、[认证结果](reports/qualification_summary.yaml)
-- [运行记录](reports/run_log.md)、[Skill优化报告](reports/skill-improvement-report.md)（SK-009记录开发目录规则）
-- [需求](docs/requirement.md)、[架构](docs/architecture.md)、[验证计划](docs/validation-plan.md)
+使用宿主 uv 环境，先按使用指南在本 VIP 的 build 内适配并冻结执行输入，再调用最新版 suite。tools 已接入 AHB_RUN_ROOT；实际执行使用 build 内源码快照，并显式设置本 VIP/build 下的运行根。src 和测试断言的变更、运行适配、证据复核应分别记录；不静默沿用旧 PASS。
+
+验收范围和 AI 出口结论流程以 [验收说明](docs/acceptance.md) 为准。历史工具输出已迁移至本 VIP/build，运行须指定 LOG_DIR 或 AHB_RUN_ROOT。
+
+## 当前资格状态
+
+版本验收清单为draft，当前不授权出口；历史执行通过及旧候选不等于新版本验收完成。以 [当前总览](reports/latest.md) 和 [版本验收说明](docs/acceptance.md) 为准。

@@ -1,3 +1,7 @@
-# Test organization
+# 测试组织
 
-Test definitions are in ../tb and filelists in ../. See ../../docs/validation-plan.md for the frozen full-contract acceptance matrix. run.py full is the development regression set; missing contract tiers remain NOT_RUN in qualification.
+测试顶层位于 ../tb，编译清单位于 ../。分层策略、原合同验收条件和已知缺口见 [验证计划](../../docs/validation-plan.md)。full 入口执行当前 13 组开发测试；完整验收还包括等待矩阵、固定种子、压力、变异、跨工具和完整配置矩阵。
+
+所有原始输出放在本 VIP 的 build。报告应分别说明用例执行状态和完整资格判定，不能因必测项未运行而描述为全部测试失败。
+
+验收范围和 AI 出口结论流程以 [验收说明](../../docs/acceptance.md) 为准。历史工具输出已迁移至本 VIP/build，运行须指定 LOG_DIR 或 AHB_RUN_ROOT。

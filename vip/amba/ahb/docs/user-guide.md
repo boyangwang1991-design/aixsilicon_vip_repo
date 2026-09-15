@@ -1,95 +1,96 @@
-# AHB VIP user guide
+# AHB VIP 使用指南
 
-# 1. Introduction
-Development implementation of the AHB contract in `../ahb_contract.md`. Version 0.1.0 is a development candidate; it is not a qualified V1.0 release. Exact acceptance state is in `rtm.md` and `../reports/gate_status.md`.
+## 1. 简介
 
-# 2. Supported Capabilities
-Manager Active, Subordinate Active, Passive and Disabled UVM agents; Lite and AHB5 pipeline, bursts, wait/error/reset; byte-addressable memory, security region policy, exclusive reservations, strobe and four USER phases; Issue C parity groups; standalone assertions; classical arbitration and RETRY/SPLIT retry policy. The implementation and tests are distinct from complete protocol/profile qualification.
+0.1.0 开发候选；完整 1.0.0 合同尚需验收。本指南描述实际 API、运行边界和已知限制。
 
-# 3. Package Contents
-`src/` source; `unit_test/` independent object/algorithm checks; `self_test/` directed/component/system benches; `config/` profiles/requirements/rules/acceptance; `examples/` minimal entry; `reports/` execution evidence and skill feedback; `.core` packaging.
+## 2. 能力
 
-# 4. Dependencies
-SystemVerilog/UVM1.2 and VCS, GNU make; Python tools use the enclosing workflow's uv environment with PyYAML/jsonschema. No separate virtual environment is needed. Public assets have no private DUT hierarchy dependency. Commercial tool locations come from the environment.
+参数化 Manager/Subordinate/Passive agent、流水、burst、等待/错误/复位、稀疏存储、exclusive、AHB5 strobe/USER/parity、Classic 仲裁/RETRY/SPLIT、RAL 与桥接记分板。实现存在不等于已完成全协议认证。
 
-# 5. Build and Compile
-From this VIP directory:
+## 3. 目录
+
+src/config/docs/unit_test/self_test/examples 是稳定输入；reports/qualification.md 是最新流程报告。运行根的 logs/evidence/coverage/metadata/gates/work/core 是可复现产物，全部位于本 VIP 的 build，不提交或上传。
+
+## 4. 依赖
+
+宿主 uv 环境、GNU make、VCS/UVM1.2 和有效许可证。无需子仓虚拟环境。
+
+## 5. 构建与运行
+
+从 workflow 根目录使用宿主 uv 环境。运行前核对输出路径；当前 tools 下的历史入口仍会写旧 reports 路径，不得直接调用。
+
+1. 在本 VIP 的 build 内建立独立输入副本，保留 src 和测试断言，适配工具 cwd、LOG_DIR、临时目录及原始数据输出路径。
+2. 核对 config/verification-plan.yaml 和 config/build.yaml，冻结本次输入。所有 169 条需求仍在验收分母中。
+3. 将 AHB_INPUT 设置为该输入副本的绝对路径，使用显式的新运行 ID：
 
 ```bash
-make -C self_test smoke
-make -C self_test full
-uv run --no-sync python tools/run.py smoke --wait 3
-uv run --no-sync python tools/run.py stress --seed 42 --count 5000
-uv run --no-sync python tools/check_config.py
-uv run --no-sync python tools/mutate.py
+uv run --no-sync python .roo/skills/vip-development-suite/scripts/vip_tool.py regression \
+  --root "$AHB_INPUT" --vip ahb --tier full --seed 1 --run-id "$AHB_RUN_ID"
 ```
 
-The development `full` executable set is not the larger contract full-acceptance denominator in config/regression.yaml. A missing simulator is NOT_RUN, never implicitly replaced by another simulator. Each run requires a completion oracle, zero unexpected UVM errors/fatals and process success. Compilation and runtime license access may require execution-environment permission.
+suite 默认使用该输入自身的 build；由于输入已在 AHB/build 内，所有产物仍在真实 AHB 的 build 树下。不可把 --build-root 指向工作区根。补充等待、种子、压力和变异测试必须使用相同冻结输入和指定的运行根。
 
-Compilation order: `ahb_types_pkg.sv`, `ahb_if.sv`, `ahb_pkg.sv`, standalone assertion/arbiter modules, then the chosen testbench. Class `.sv` files are includes, not independent compilation units.
+脚本记录命令和日志，AI 分析后撰写 metadata，再运行 report-check/qualify。最新六份阶段报告直接保存在源 reports 中，latest.md 提供综合入口。冻结执行副本仍在 build 中保留供原判定复核。最新报告记录实际命令和证据路径，历史 PASS 不直接沿用。
 
-# 6. DUT Interface Connection
-Instantiate `ahb_if #(AW,DW,BW,PW,MW,AU,DU,RU,PROFILE,SECURE,EXCLUSIVE,STROBE,PARITY)` with an external HCLK/HRESETn. Parameter positions match `ahb_agent` and `ahb_monitor`. PROFILE is 0 Lite, 1 AHB5, 2 Classic.
+## 6. 接口连接
 
-Manager drives address/control and write data. Subordinate drives HREADYOUT/response/read data. The environment supplies HREADY from the **data-phase** target mux, and HSEL from address decoding. The self-test 4×4 example explicitly registers data-phase selection. Never select data response using the current address HSEL. Classic HMASTER/HMASTLOCK are supplied by the arbiter; Master 0 in the reference arbiter is reserved for default IDLE ownership.
+ahb_if 的结构参数顺序 AW,DW,BW,PW,MW,AU,DU,RU,PROFILE,SECURE,EXCLUSIVE,STROBE,PARITY 必须与 agent 和 config_db 的 vif 类型一致。PROFILE 0/1/2 分别为 Lite/AHB5/Classic。HREADY 必须由数据阶段目标选择。clocking 输入 #1step、输出 #0；复位建议在 negedge 释放。
 
-Clocking blocks use input `#1step` and output `#0` at posedge. Examples release reset on negedge. Passive agents have no output task. Optional zero-width ports use internal one-bit placeholders; disabled features have fixed semantic defaults. The current basic attribute-bin labels include these defaults; full capability-based bin pruning is not yet implemented. The existing HWIF Lite contract is incomplete for this input scope; no full HWIF binding compatibility is claimed.
+## 8. 基本配置
 
-# 8. Basic Configuration
-Create `ahb_config` with factory, set its widths/features to match the physical interface and `mode`, then provide config_db entries before build:
+通过 factory 创建 ahb_config，设置与接口匹配的宽度/特性和 mode，build 前用 config_db 设置 cfg 与精确参数化 vif。结构配置在 build 冻结，响应策略在地址接受时取快照。参照 ahb_extensions_tb 的混合宽度实例。
 
-```systemverilog
-uvm_config_db#(ahb_config)::set(this,"manager*","cfg",cfg);
-uvm_config_db#(virtual ahb_if)::set(null,"uvm_test_top.manager*","vif",bus);
-```
+## 11. 发送事务
 
-The vif type must use exactly the same structural parameters. See `ahb_extensions_tb.sv` for 17-bit address/128-bit data AHB5 coexisting with 32-bit Lite. Changing an agent's path is supported; paths are supplied by the environment. Runtime responder `min_wait/max_wait/error_*` policy is sampled when an address is accepted. Structural profile, width, presence and endian configuration is frozen at agent build. A later mutation is diagnosed at the next sample with AHB-CONFIG-FROZEN.
+继承 ahb_base_seq，在 agent.sequencer 上启动；submit 入队、get_response 等完成、transfer 合并两步，write/read 使用总线 lane 格式，burst_transfer 收集突发响应。raw=1 仅供故意违规注入。返回状态区分 ERROR、EXCLUSIVE_FAIL、RESET_ABORT、WATCHDOG、CANCEL_BEFORE_ACCEPT、RETRY、SPLIT；原始 HRESP 单独保留。
 
-# 11. Sending Transactions
-Extend `ahb_base_seq`, start it on `agent.sequencer`. `submit(item)` queues a request; UVM `get_response(response)` waits for completion. `transfer(item,response)` combines them. `write(addr,data,size)` and `read(addr,data,size)` use bus-lane formatted data. `burst_transfer(first,length,responses)` submits a burst and collects responses. Data fields are 1024-bit containers; only the configured lanes participate.
+## 18. 模型扩展
 
-`ahb_item` carries addr/write/size/burst/prot/lock/nonsecure/exclusive/master/auser/wuser/strobe/trans/tag. `raw=1` bypasses transaction validation for deliberate injection; normal traffic uses `raw=0`. `trans` is IDLE=0/BUSY=1/NONSEQ=2/SEQ=3. Response distinguishes ERROR, EXCLUSIVE_FAIL, RESET_ABORT, WATCHDOG, CANCEL_BEFORE_ACCEPT, RETRY and SPLIT from OKAY. `response` preserves actual HRESP separately.
+config_db 的 policy 注入 ahb_response_policy；select_response 决定等待和响应。memory 注入 ahb_memory；peek/poke/load/dump、初始化策略与预约可用。read-clear/W1C/FIFO 在成功完成时产生副作用；失败写默认不提交。后门避开采样边沿；同址并发共享存储未提供调度无关仲裁保证。
 
-Burst helper crosses a 1KB boundary only by starting a new NONSEQ for finite INCR requests; fixed bursts that cross are rejected. It does not silently repair arbitrary raw requests. Exclusive pairs use single-beat requests and a data-phase HEXOKAY result. Completed response objects preserve UVM sequence/transaction identity.
+## 20. 独立观测
 
-# 18. Response and Device Customization
-Inject `ahb_response_policy` via config_db key `policy` on the subordinate driver. Override `select_response(item,waits,response)` or use scripted queues. `ahb_region_policy` additionally checks address, direction, privilege and security; overlapping regions require distinct priorities.
+monitor.transaction_ap/request_ap/cycle_ap/error_ap/burst_ap 分别发布完成、地址、周期、诊断和有界突发块。订阅对象只读，编辑前 clone。history_limit 限制历史；bounded_chunk 不等于协议突发结束。只看协议无法推断未初始化数据的正确性。
 
-Inject `ahb_memory` using config_db key `memory`. `peek/poke/load/dump`, sparse 64-bit addressing, explicit initialization validity, INIT_X/ZERO/CONSTANT/ADDRESS/RANDOM policies and reservation invalidation are available. `ahb_register_memory` demonstrates read-clear/W1C/RO/WO, and `ahb_fifo_memory` demonstrates completion-time FIFO effects. Reads never pop/clear during waits. Failed writes do not commit by default. Device-specific error side effects require an explicit override.
+## 25. 覆盖
 
-Backdoor calls must be scheduled away from the bus sample/commit edge, for example at negedge, when deterministic same-cycle ordering is required. Multiple responders may share a memory handle; simultaneous conflicting commits currently follow simulation call order and are not qualified as a deterministic system conflict policy. Use serialized access or an environment-owned arbiter pending that qualification.
+AHB_BIN/AHB_STATS 为诊断导出；只能在模型与配置匹配时按 bin 合并。全合同覆盖仪器化缺口必须保留。
 
-# 20. Passive Observation and Checking
-The interface exposes nets; manual procedural stimulus must drive local variables connected with assign, as demonstrated by ahb_vectors_tb. Analysis subscribers must treat received objects as read-only and clone for editing; monitor deep copies protect its own state. `agent.monitor.transaction_ap` publishes completed/aborted beats, `request_ap` accepted addresses, `cycle_ap` sampled cycles, `error_ap` diagnostics and `burst_ap` bounded aggregate chunks. `history_limit` caps aggregation; `bounded_chunk` is a streaming chunk boundary, not protocol burst termination. Protocol-only mode cannot establish data integrity without independent observations/model initialization.
+## 29. RAL
 
-Rules are enumerated in config/checkers.yaml. Per-rule enable/severity and explicit waiver reason/expiry are configurable. Environment watchdog and DUT capability diagnostics are separate categories. Cycle watchdog does not progress if HCLK stops; each example also has an independent simulation-time watchdog.
+ahb_reg_adapter 设置 cfg 并连接 map/manager sequencer；monitor.transaction_ap 连接 predictor.bus_in。预测只采纳成功完成；无 HWSTRB 的稀疏使能拒绝，不自动读改写。
 
-# 25. Coverage
-Covergroups are diagnostic views. `AHB_BIN` logs export exact bin IDs/hits and normal/error/abort categories; `AHB_STATS` reports completed beats, useful bytes and waits. Use compatible bin-set unions; never merge percentages by maximum. Mandatory contract coverage closure remains explicitly separate.
+## 34. 系统比较
 
-# 29. RAL Integration
-Create `ahb_reg_adapter`, set `adapter.cfg`, attach it to a register map/manager sequencer, and connect monitor.transaction_ap to `ahb_reg_predictor.bus_in`. The predictor updates only confirmed successful completions. Sparse enables without HWSTRB are rejected; no implicit read-modify-write. See self_test/tb/ahb_ral_tb.sv for executable integration.
+ahb_bridge_scoreboard 按路径处理上下游完成字节；translation policy 指定宽度、端序、地址映射、错误扇出与属性变换。USER 需显式映射；缺失/重复字节在 check_phase 失败。不据单条路径推断 CDC、全系统原子性或一致性。
 
-# 34. System Comparison
-`ahb_bridge_scoreboard` has upstream/downstream analysis inputs. Supply `ahb_translation_policy` with widths, endian, address map, error fanout and attribute overrides. Each instance checks one ordered path. Missing/duplicate bytes remain queued and cause check_phase failure. USER transforms require an explicit override and opt-in comparison. Visibility beyond connected observation paths is not inferred.
+## 37. 常见问题
 
-# 37. Common Issues
-A vif config_db type mismatch means physical and component parameters differ. Constant wait usually means HREADY was not connected to the data-phase response. Unknown first reads reflect the default INIT_X policy; preload memory or explicitly choose another policy. Missing UVM response can also mean the caller abandoned/terminated its sequence; accepted bus work must be drained or reset.
+vif 类型不匹配先检查结构参数；持续等待检查数据阶段 HREADY；初次读 X 检查 INIT_X/预装载；缺响应检查 sequence 是否被提前终止。工具执行失败保留原始日志。
 
-# 39. Machine-readable Metadata
-Profiles and dependencies: config/profiles.yaml and profile.schema.json. Required acceptance: regression.yaml. Original IDs: requirements.yaml. Rule registry: checkers.yaml. Run manifests carry tool version, seed, configuration/source fingerprints and log paths.
+## 39. 机器合同
 
-# 41. Limitations
-See requirement.md §23 and RTM for authoritative full-contract gaps. Cross-tool/IEEE1800.2 compatibility, complete per-profile 100-seed coverage, all mandatory crosses, all legal checker exceptions and system atomicity/exclusive visibility are not implied by smoke success. B.b/Classic source audits and protocol-specific distinctions require complete review before release. Same-cycle shared-memory conflicts, sequence kill/re-submit policies, full USER transform policies and all negative injection combinations need additional qualification. No automatic V1.0 release is performed.
+verification-plan.yaml 冻结集合；report-context 输出身份；报告仅一个 VIP_METADATA 块，遵循 vip.execution/v1。
 
-# 42. Version Compatibility
-0.1.0 is a local development candidate. No change is made to the supplied contract, existing APB/AXI assets, registry release state or catalog. API stability starts only after qualification/versioned release.
+## 41. 限制
 
-# 43. Reporting Issues
-Provide profile YAML, simulator/UVM version, seed, source fingerprint, rule ID, command and the matching reports/logs run. Skill feedback is separately maintained in reports/skill-improvement-report.md.
+S2/S3 全文、第二工具/IEEE1800.2、完整 feature dependency 与交叉、所有 checker 正负向、系统原子性/可见性、USER 转换和 sequence kill/re-submit 尚需验收。
 
-# 45. User Guide Completion Checklist
-Commands, actual APIs, roles, timing, models, independent observations, RAL and limitations are documented from the implementation.
+## 42. 版本
 
-# 46. Definition of User Guide Complete
-A reproducible smoke and an explicit full-contract evidence state are required; this guide does not replace the RTM.
+0.1.0 未等同于正式发布 1.0.0；目录整理和重跑不自动更新 registry/catalog。
+
+## 43. 问题报告
+
+提供剖面、工具/UVM版本、seed、源指纹、规则 ID、命令与 build 日志。报告正文用中文。
+
+## 45. 指南检查
+
+命令、API、角色、时序、模型、独立观测与限制对应当前实现。
+
+## 46. 完成定义
+
+可复现执行记录与显式完整合同状态齐备；指南不能代替 RTM 验收。
+
+验收范围和 AI 出口结论流程以 [验收说明](acceptance.md) 为准。历史工具输出已迁移至本 VIP/build，运行须指定 LOG_DIR 或 AHB_RUN_ROOT。

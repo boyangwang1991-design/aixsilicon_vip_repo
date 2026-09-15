@@ -11,5 +11,16 @@ module ahb_smoke_tb;
   assign bus.HREADY=bus.HREADYOUT;
   assign bus.HSEL=1;
   initial begin uvm_config_db#(virtual ahb_if)::set(null,"uvm_test_top.*","vif",bus);run_test("ahb_smoke_test");end
-  initial begin #1000000;$fatal(1,"WALLCLOCK_WATCHDOG");end
+  // 512 transfers, ten ns clock, plus startup and a bounded 2x margin.
+  initial begin
+    longint unsigned watchdog_ns;
+    int wait_setting;
+    wait_setting=0;
+    void'($value$plusargs("WAIT=%d",wait_setting));
+    if(wait_setting<0) $fatal(1,"INVALID_WAIT");
+    watchdog_ns=10000+64'd512*(64'(wait_setting)+2)*10*2;
+    $display("AHB_WATCHDOG_BUDGET_NS=%0d WAIT=%0d",watchdog_ns,wait_setting);
+    #(watchdog_ns*1ns);
+    $fatal(1,"WALLCLOCK_WATCHDOG");
+  end
 endmodule
